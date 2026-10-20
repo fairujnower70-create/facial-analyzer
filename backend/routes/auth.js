@@ -4,7 +4,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db'); 
 
-// যদি এনভায়রনমেন্ট ভেরিয়েবলে JWT_SECRET না থাকে তবে ব্যাকআপ হিসেবে এটি কাজ করবে
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 
 // --- সাইনআপ (Signup) রুট লজিক ---
@@ -47,7 +46,7 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Invalid email or password' });
         }
         
-        const user = result.rows[0]; // প্রথম ম্যাচিং ইউজার অবজেক্ট নেওয়া
+        const user = result.rows[0]; // প্রথম ম্যাচিং রো অবজেক্ট নেওয়া
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
@@ -71,6 +70,7 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
+
 
 
 
