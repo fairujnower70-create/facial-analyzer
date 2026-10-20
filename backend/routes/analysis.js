@@ -1,70 +1,37 @@
 const express = require('express');
-const db = require('../db');
-const { requireAuth } = require('../middleware/auth');
-
 const router = express.Router();
+const db = require('../db');
+const { requireAuth } = require('./auth');
 
-// Save a scan result computed client-side (face-api.js runs in the browser;
-// the backend just persists the structured output per user).
-router.post('/', requireAuth, (req, res) => {
-  const {
-    label,
-    age,
-    gender,
-    genderProbability,
-    dominantExpression,
-    expressions,
-    faceShape,
-    faceShapeConfidence,
-    symmetryScore,
-    landmarksCount,
-    thumbnail
-  } = req.body || {};
+// স্ক্যান হিস্ট্রি ডাটাবেজে সেভ করার রুট
+router.post('/', requireAuth, async (req, res) => {
+    const { age, gender, expression, face_shape, symmetry_score, beauty_score } = req.body;
+    const userId = req.user.id;
 
-  if (age === undefined || !gender || !dominantExpression) {
-    return res.status(400).json({ error: 'Incomplete analysis payload' });
-  }
-
-  const info = db
-    .prepare(
-      `INSERT INTO scans
-        (user_id, label, age, gender, gender_probability, dominant_expression, expressions_json, face_shape, face_shape_confidence, symmetry_score, landmarks_count, thumbnail)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
-      req.user.id,
-      label || 'Scan',
-      age,
-      gender,
-      genderProbability || null,
-      dominantExpression,
-      JSON.stringify(expressions || {}),
-      faceShape || null,
-      faceShapeConfidence || null,
-      symmetryScore || null,
-      landmarksCount || null,
-      thumbnail || null
-    );
-
-  const saved = db.prepare('SELECT * FROM scans WHERE id = ?').get(info.lastInsertRowid);
-  res.status(201).json({ scan: saved });
+    try {
+        await db.query(
+            `INSERT INTO scans (user_id, age, gender, expression, face_shape, symmetry_score, beauty_score) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [userId, age, gender, expression, face_shape, symmetry_score, beauty_score]
+        );
+        res.status(201).json({ message: 'Scan history saved successfully' });
+    } catch (error) {
+        console.error("Scan Save Error: ", error);
+        res.status(500).json({ error: 'Failed to save scan history' });
+    }
 });
 
-router.get('/', requireAuth, (req, res) => {
-  const rows = db
-    .prepare('SELECT * FROM scans WHERE user_id = ? ORDER BY created_at DESC')
-    .all(req.user.id);
-  res.json({ scans: rows });
-});
-
-router.delete('/:id', requireAuth, (req, res) => {
-  const info = db
-    .prepare('DELETE FROM scans WHERE id = ? AND user_id = ?')
-    .run(req.params.id, req.user.id);
-  if (info.changes === 0) {
-    return res.status(404).json({ error: 'Scan not found' });
-  }
-  res.json({ ok: true });
+// ইউজার ড্যাশবোর্ডের জন্য স্ক্যান হিস্ট্রি তুলে আনার রুট
+router.get('/', requireAuth, async (req, res) => {
+    const userId = req.user.id;
+    try {
+        const result = await db.query('SELECT * FROM scans WHERE user_id = \$1 ORDER BY created_at DESC', [userId]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Fetch Scans Error: ", error);
+        res.status(500).json({ error: 'Failed to fetch scan history' });
+    }
 });
 
 module.exports = router;
+
