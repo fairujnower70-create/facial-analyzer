@@ -3,32 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db'); 
-
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
-
-// মিডলওয়্যার ফাংশনসমূহ (অন্যান্য রুটের সুরক্ষার জন্য)
-function requireAuth(req, res, next) {
-  const token = req.cookies && req.cookies.token;
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = payload;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired session' });
-  }
-}
-
-function requireAdmin(req, res, next) {
-  requireAuth(req, res, () => {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-    next();
-  });
-}
+const { JWT_SECRET } = require('../middleware/auth'); // মিডলওয়্যার থেকে সিক্রেট আনা
 
 // --- সাইনআপ (Signup) রুট ---
 router.post('/signup', async (req, res) => {
@@ -65,9 +40,14 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     try {
         const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        
+        if (result.rows.length === 0) {
+            return res.status(400).json({ error: 'Invalid email or password' });
+        }
+        
         const user = result.rows[0];
 
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        if (!(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ error: 'Invalid email or password' });
         }
 
@@ -88,7 +68,5 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
-module.exports.requireAuth = requireAuth;
-module.exports.requireAdmin = requireAdmin;
-module.exports.JWT_SECRET = JWT_SECRET;
+
 
