@@ -1,83 +1,94 @@
 const express = require('express');
+const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../db');
-const { requireAuth, JWT_SECRET } = require('../middleware/auth');
+const db = require('../db'); 
 
-const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 
-const COOKIE_OPTS = {
-  httpOnly: true,
-  sameSite: 'lax',
-  secure: process.env.NODE_ENV === 'production',
-  maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-};
-
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+// মিডলওয়্যার ফাংশনসমূহ (অন্যান্য রুটের সুরক্ষার জন্য)
+function requireAuth(req, res, next) {
+  const token = req.cookies && req.cookies.token;
+  if (!token) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = payload;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired session' });
+  }
 }
 
-router.post('/signup', (req, res) => {
-  const { name, email, password } = req.body || {};
+function requireAdmin(req, res, next) {
+  requireAuth(req, res, () => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+  });
+}
 
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'Name is required' });
-  }
-  if (!email || !isValidEmail(email)) {
-    return res.status(400).json({ error: 'A valid email is required' });
-  }
-  if (!password || password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters' });
-  }
+// --- সাইনআপ (Signup) রুট ---
+router.post('/signup', async (req, res) => {
+    const { name, email, password } = req.body;
+    try {
+        if (!name || !email || !password) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
 
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
-  if (existing) {
-    return res.status(409).json({ error: 'An account with this email already exists' });
-  }
+        const userExists = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (userExists.rows.length > 0) {
+            return res.status(400).json({ error: 'Email already registered' });
+        }
 
-  const passwordHash = bcrypt.hashSync(password, 10);
-  const info = db
-    .prepare('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)')
-    .run(name.trim(), email.toLowerCase(), passwordHash);
+        const allUsers = await db.query('SELECT id FROM users LIMIT 1');
+        const role = allUsers.rows.length === 0 ? 'admin' : 'user';
 
-  // The very first account on a fresh database becomes an admin automatically.
-  const userCount = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
-  let role = 'user';
-  if (userCount === 1) {
-    db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(info.lastInsertRowid);
-    role = 'admin';
-  }
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-  const user = { id: info.lastInsertRowid, name: name.trim(), email: email.toLowerCase(), role };
-  const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('token', token, COOKIE_OPTS);
-  res.status(201).json({ user });
+        await db.query(
+            'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4)',
+            [name, email, hashedPassword, role]
+        );
+
+        res.status(201).json({ message: 'User registered successfully' });
+    } catch (error) {
+        console.error("Signup Error: ", error);
+        res.status(500).json({ error: 'Something went wrong on the server' });
+    }
 });
 
-router.post('/login', (req, res) => {
-  const { email, password } = req.body || {};
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
+// --- লগইন (Login) রুট ---
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        const user = result.rows[0];
 
-  const row = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
-  if (!row || !bcrypt.compareSync(password, row.password_hash)) {
-    return res.status(401).json({ error: 'Incorrect email or password' });
-  }
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(400).json({ error: 'Invalid email or password' });
+        }
 
-  const user = { id: row.id, name: row.name, email: row.email, role: row.role };
-  const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('token', token, COOKIE_OPTS);
-  res.json({ user });
-});
+        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+        
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: true, 
+            sameSite: 'none',
+            maxAge: 24 * 60 * 60 * 1000 
+        });
 
-router.post('/logout', (req, res) => {
-  res.clearCookie('token', COOKIE_OPTS);
-  res.json({ ok: true });
-});
-
-router.get('/me', requireAuth, (req, res) => {
-  res.json({ user: req.user });
+        res.json({ message: 'Login successful', user: { name: user.name, email: user.email, role: user.role } });
+    } catch (error) {
+        console.error("Login Error: ", error);
+        res.status(500).json({ error: 'Something went wrong on the server' });
+    }
 });
 
 module.exports = router;
+module.exports.requireAuth = requireAuth;
+module.exports.requireAdmin = requireAdmin;
+module.exports.JWT_SECRET = JWT_SECRET;
+
