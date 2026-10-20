@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin — Mien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/index.html" class="brand"><span class="brand-mark"></span>Mien</a>
+    <div class="nav-links">
+     
+      <a href="/scan.html">Scan</a>
+      <a href="/history.html">History</a>
+      
+    </div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<main class="wrap" style="padding:44px 24px 96px;">
+  <div style="max-width:720px; margin:0 auto 36px;">
+    <h1 style="font-size:28px;">Admin panel</h1>
+    <p>Account-wide overview: users, scans, emotion trends, and moderation controls.</p>
+  </div>
+
+  <div id="loading" class="loader-stack"><div class="neon-ring-loader"></div></div>
+  <div id="denied" class="panel center" style="display:none; max-width:520px; margin:0 auto; padding:44px 24px;">
+    <p style="margin-bottom:18px;">This account doesn't have admin access.</p>
+    <a href="/dashboard.html" class="btn btn-primary">Back to dashboard</a>
+  </div>
+
+  <div id="admin-body" style="display:none; max-width:1040px; margin:0 auto;">
+
+    <div id="stats-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:32px;"></div>
+
+    <div style="display:grid; grid-template-columns:1.1fr 1fr; gap:20px; margin-bottom:44px;" id="breakdown-row">
+      <section class="panel" style="padding:24px;">
+        <h2 style="font-size:16px; margin-bottom:16px;">Emotion breakdown (all scans)</h2>
+        <div id="emotion-breakdown"></div>
+      </section>
+      <section class="panel" style="padding:24px;">
+        <h2 style="font-size:16px; margin-bottom:16px;">Recent activity</h2>
+        <div id="recent-activity" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </section>
+    </div>
+
+    <section style="margin-bottom:48px;">
+      <h2 style="font-size:19px; margin-bottom:16px;">Users</h2>
+      <div class="panel" style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13.5px;">
+          <thead>
+            <tr style="text-align:left; border-bottom:1px solid var(--border);">
+              <th style="padding:14px 16px;">Name</th>
+              <th style="padding:14px 16px;">Email</th>
+              <th style="padding:14px 16px;">Role</th>
+              <th style="padding:14px 16px;">Scans</th>
+              <th style="padding:14px 16px;">Joined</th>
+              <th style="padding:14px 16px;"></th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+        <h2 style="font-size:19px; margin:0;">Scan logs (all users)</h2>
+        <div class="row gap-12" style="flex-wrap:wrap;">
+          <input id="scan-search" type="search" placeholder="Search by name, email, or emotion…" style="padding:9px 13px; border-radius:var(--radius-sm); border:1px solid var(--navy-line); background:var(--bg-input); color:var(--text-primary); font-size:13.5px; min-width:220px;" />
+          <button class="btn btn-ghost" id="export-csv" style="padding:9px 14px; font-size:13px;">Export CSV</button>
+          <button class="btn btn-ghost" id="export-json" style="padding:9px 14px; font-size:13px;">Export JSON</button>
+        </div>
+      </div>
+      <div class="panel" style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13.5px;">
+          <thead>
+            <tr style="text-align:left; border-bottom:1px solid var(--border);">
+              <th style="padding:14px 16px;">User</th>
+              <th style="padding:14px 16px;">Age</th>
+              <th style="padding:14px 16px;">Gender</th>
+              <th style="padding:14px 16px;">Expression</th>
+              <th style="padding:14px 16px;">Face shape</th>
+              <th style="padding:14px 16px;">When</th>
+              <th style="padding:14px 16px;"></th>
+            </tr>
+          </thead>
+          <tbody id="scans-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <p class="footer-disclaimer">Admin access is limited to accounts with the "admin" role.</p>
+  <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/reference-data.js"></script>
+<script src="js/results-render.js"></script>
+<script>
+(async function () {
+  const loading = document.getElementById('loading');
+  const denied = document.getElementById('denied');
+  const body = document.getElementById('admin-body');
+  let allScans = [];
+  let me;
+
+  try {
+    me = (await Api.me()).user;
+  } catch (_) {
+    window.location.href = '/login.html?next=admin';
+    return;
+  }
+
+  if (me.role !== 'admin') {
+    loading.style.display = 'none';
+    denied.style.display = 'block';
+    return;
+  }
+
+  try {
+    const [stats, usersRes, scansRes] = await Promise.all([Api.adminStats(), Api.adminUsers(), Api.adminScans()]);
+    loading.style.display = 'none';
+    body.style.display = 'block';
+    allScans = scansRes.scans;
+    renderStats(stats);
+    renderBreakdown(stats.expressionBreakdown || []);
+    renderActivity(stats.recentActivity || []);
+    renderUsers(usersRes.users);
+    renderScans(allScans);
+  } catch (err) {
+    loading.innerHTML = `<p class="muted">Could not load admin data: ${err.message}</p>`;
+  }
+
+  // ---------- stats cards ----------
+  function renderStats(s) {
+    const cards = [
+      ['Total users', s.totalUsers],
+      ['Total scans', s.totalScans],
+      ['Scans today', s.scansToday],
+      ['New users (7d)', s.newUsersThisWeek]
+    ];
+    document.getElementById('stats-grid').innerHTML = cards
+      .map(
+        ([label, value]) => `
+        <div class="card">
+          <div class="muted" style="font-size:12.5px; margin-bottom:6px;">${label}</div>
+          <div style="font-family:var(--font-display); font-size:26px;">${value}</div>
+        </div>`
+      )
+      .join('');
+  }
+
+  // ---------- emotion breakdown ----------
+  function renderBreakdown(rows) {
+    const el = document.getElementById('emotion-breakdown');
+    if (!rows.length) {
+      el.innerHTML = '<p class="muted" style="font-size:13.5px;">No scans logged yet.</p>';
+      return;
+    }
+    const max = Math.max(...rows.map((r) => r.count));
+    el.innerHTML = rows
+      .map((r) => {
+        const color = emotionColor(r.expression);
+        const pct = Math.round((r.count / max) * 100);
+        return `
+        <div style="margin-bottom:12px;">
+          <div class="row" style="justify-content:space-between; font-size:13px; margin-bottom:5px;">
+            <span>${capWord(r.expression)}</span><span class="muted">${r.count}</span>
+          </div>
+          <div style="height:8px; border-radius:4px; background:var(--bg-input); overflow:hidden;">
+            <div style="height:100%; width:${pct}%; background:${color};"></div>
+          </div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  // ---------- recent activity ----------
+  function renderActivity(rows) {
+    const el = document.getElementById('recent-activity');
+    if (!rows.length) {
+      el.innerHTML = '<p class="muted" style="font-size:13.5px;">No activity yet.</p>';
+      return;
+    }
+    el.innerHTML = rows
+      .map(
+        (r) => `
+      <div class="row" style="justify-content:space-between; font-size:13px; padding-bottom:8px; border-bottom:1px solid var(--border);">
+        <span>${escapeHtml(r.user_name)} ${emotionBadge(r.dominant_expression)}</span>
+        <span class="muted">${new Date(r.created_at).toLocaleString()}</span>
+      </div>`
+      )
+      .join('');
+  }
+
+  // ---------- users table ----------
+  function renderUsers(users) {
+    document.getElementById('users-table-body').innerHTML = users
+      .map(
+        (u) => `
+        <tr id="user-row-${u.id}" style="border-bottom:1px solid var(--border);">
+          <td style="padding:12px 16px;">${escapeHtml(u.name)}</td>
+          <td style="padding:12px 16px;" class="muted">${escapeHtml(u.email)}</td>
+          <td style="padding:12px 16px;">
+            <span style="font-size:12px; padding:3px 9px; border-radius:20px; border:1px solid var(--border-strong); ${u.role === 'admin' ? 'color:var(--neon);' : 'color:var(--text-muted);'}">${u.role}</span>
+          </td>
+          <td style="padding:12px 16px;">${u.scan_count}</td>
+          <td style="padding:12px 16px;" class="muted">${new Date(u.created_at).toLocaleDateString()}</td>
+          <td style="padding:12px 16px;">
+            ${u.id === me.id ? '' : `<button class="btn btn-danger-ghost" style="padding:6px 12px; font-size:12.5px;" data-del-user="${u.id}">Delete</button>`}
+          </td>
+        </tr>`
+      )
+      .join('');
+
+    document.querySelectorAll('[data-del-user]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this user and all of their saved scans?')) return;
+        btn.disabled = true;
+        try {
+          await Api.adminDeleteUser(btn.getAttribute('data-del-user'));
+          document.getElementById(`user-row-${btn.getAttribute('data-del-user')}`).remove();
+        } catch (err) {
+          alert(err.message);
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  // ---------- scans table ----------
+  function renderScans(scans) {
+    const tbody = document.getElementById('scans-table-body');
+    if (!scans.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:20px 16px;" class="muted">No matching scans.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = scans
+      .map(
+        (s) => `
+        <tr id="scan-row-${s.id}" style="border-bottom:1px solid var(--border);">
+          <td style="padding:12px 16px;">${escapeHtml(s.user_name)}<div class="muted" style="font-size:12px;">${escapeHtml(s.user_email)}</div></td>
+          <td style="padding:12px 16px;">${Math.round(s.age)}</td>
+          <td style="padding:12px 16px;">${capWord(s.gender)}</td>
+          <td style="padding:12px 16px;">${emotionBadge(s.dominant_expression)}</td>
+          <td style="padding:12px 16px;">${s.face_shape || '—'}</td>
+          <td style="padding:12px 16px;" class="muted">${new Date(s.created_at).toLocaleString()}</td>
+          <td style="padding:12px 16px;">
+            <button class="btn btn-danger-ghost" style="padding:6px 12px; font-size:12.5px;" data-del-scan="${s.id}">Delete</button>
+          </td>
+        </tr>`
+      )
+      .join('');
+
+    document.querySelectorAll('[data-del-scan]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          const id = btn.getAttribute('data-del-scan');
+          await Api.adminDeleteScan(id);
+          document.getElementById(`scan-row-${id}`).remove();
+          allScans = allScans.filter((s) => String(s.id) !== String(id));
+        } catch (err) {
+          alert(err.message);
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  // ---------- search/filter ----------
+  document.getElementById('scan-search').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) return renderScans(allScans);
+    const filtered = allScans.filter((s) =>
+      [s.user_name, s.user_email, s.dominant_expression, s.face_shape, s.gender]
+        .filter(Boolean)
+        .some((field) => String(field).toLowerCase().includes(q))
+    );
+    renderScans(filtered);
+  });
+
+  // ---------- export ----------
+  document.getElementById('export-csv').addEventListener('click', () => {
+    if (!allScans.length) return;
+    const cols = ['id', 'user_name', 'user_email', 'age', 'gender', 'dominant_expression', 'face_shape', 'symmetry_score', 'created_at'];
+    const rows = [cols.join(',')].concat(
+      allScans.map((s) => cols.map((c) => csvEscape(s[c])).join(','))
+    );
+    downloadBlob(rows.join('\n'), 'text/csv', 'mien-scan-logs.csv');
+  });
+
+  document.getElementById('export-json').addEventListener('click', () => {
+    if (!allScans.length) return;
+    downloadBlob(JSON.stringify(allScans, null, 2), 'application/json', 'mien-scan-logs.json');
+  });
+
+  function downloadBlob(content, type, filename) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function csvEscape(value) {
+    const s = value == null ? '' : String(value);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s == null ? '' : String(s);
+    return div.innerHTML;
+  }
+})();
+</script>
+
+<style>
+  @media (max-width: 800px) {
+    #breakdown-row { grid-template-columns: 1fr !important; }
+  }
+</style>
+</body>
+</html>

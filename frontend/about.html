@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>About — Mien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/index.html" class="brand"><span class="brand-mark"></span>Mien</a>
+    <div class="nav-links">
+      <a href="/index.html#how-it-works">How it works</a>
+      <a href="/index.html#features">Features</a>
+      <a href="/about.html">About</a>
+    </div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<main class="wrap" style="padding:64px 24px 96px; max-width:720px;">
+  <h1 style="font-size:30px;">About Mien</h1>
+  <p>Mien is a demo facial-analysis app. It detects a face in a photo or webcam frame, then estimates age, gender, expression, face shape, and left/right symmetry using on-device machine learning — nothing is sent to a server unless you choose to save a result.</p>
+
+  <h2 style="font-size:19px; margin-top:32px;">How the analysis works</h2>
+  <p>Detection and landmarking run in your browser using a compact neural network. Age, gender, and expression come from that same model family. Face shape and symmetry are computed from the geometry of 68 facial landmark points using simple ratio-based heuristics.</p>
+
+  <h2 style="font-size:19px; margin-top:32px;">What Mien is not</h2>
+  <p>Mien does not identify who someone is, and its outputs are statistical estimates, not facts. It isn't built or validated for medical, legal, hiring, law-enforcement, or any identity-verification use — please don't use it for those.</p>
+
+  <h2 style="font-size:19px; margin-top:32px;">Your data</h2>
+  <p>Photos are processed locally in your browser. If you sign up and tap "Save to history," only the computed results (and, if the image is small enough, a thumbnail) are stored against your account so you can review them later.</p>
+</main>
+
+<footer class="site-footer">
+  <p class="footer-disclaimer">Estimates only — not a medical, biometric-identity, or legal tool.</p>
+  <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+</body>
+</html>

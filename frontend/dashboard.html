@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard — Mien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/index.html" class="brand"><span class="brand-mark"></span>Mien</a>
+    <div class="nav-links">
+      
+      <a href="/scan.html">Scan</a>
+      <a href="/history.html">History</a>
+    </div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<main class="wrap" style="padding:44px 24px 96px;">
+
+  <div id="loading" class="loader-stack"><div class="neon-ring-loader"></div></div>
+
+  <div id="dash-body" style="display:none; max-width:1040px; margin:0 auto;">
+
+    <div style="margin-bottom:32px;">
+      <h1 id="welcome-heading" style="font-size:28px;">Welcome back</h1>
+      <p>Here's a quick look at your activity, and where to go next.</p>
+    </div>
+
+    <!-- quick actions -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-bottom:36px;">
+      <a href="/scan.html" class="panel" style="padding:22px; text-decoration:none; display:block;">
+        <div class="row gap-12" style="align-items:center; margin-bottom:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M12 4L7 9M12 4l5 5" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="font-family:var(--font-display); font-size:16px; color:var(--text-primary);">Run a scan</span>
+        </div>
+        <p class="muted" style="font-size:13.5px; margin:0;">Upload a photo or use your webcam for a new analysis.</p>
+      </a>
+
+      <a href="/history.html" class="panel" style="padding:22px; text-decoration:none; display:block;">
+        <div class="row gap-12" style="align-items:center; margin-bottom:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#8b5cf6" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="font-family:var(--font-display); font-size:16px; color:var(--text-primary);">View history</span>
+        </div>
+        <p class="muted" style="font-size:13.5px; margin:0;">Browse and reopen every scan you've saved.</p>
+      </a>
+
+      <a href="/admin.html" id="admin-quick-link" class="panel" style="padding:22px; text-decoration:none; display:none;">
+        <div class="row gap-12" style="align-items:center; margin-bottom:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="#8b5cf6" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <span style="font-family:var(--font-display); font-size:16px; color:var(--text-primary);">Admin panel</span>
+        </div>
+        <p class="muted" style="font-size:13.5px; margin:0;">Manage users, review logs, and export data.</p>
+      </a>
+    </div>
+
+    <!-- stats -->
+    <h2 style="font-size:18px; margin-bottom:14px;">Your activity</h2>
+    <div id="stats-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:36px;"></div>
+
+    <!-- recent scans -->
+    <h2 style="font-size:18px; margin-bottom:14px;">Recent scans</h2>
+    <div id="recent-scans" style="display:flex; flex-direction:column; gap:12px;"></div>
+    <div id="no-scans" class="panel center" style="display:none; padding:36px 24px;">
+      <p style="margin-bottom:16px;">You haven't saved any scans yet.</p>
+      <a href="/scan.html" class="btn btn-primary">Run your first scan</a>
+    </div>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <p class="footer-disclaimer">Estimates only — not a medical, biometric-identity, or legal tool.</p>
+  <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/reference-data.js"></script>
+<script src="js/results-render.js"></script>
+<script>
+(async function () {
+  let me;
+  try {
+    me = (await Api.me()).user;
+  } catch (_) {
+    window.location.href = '/login.html?next=dashboard';
+    return;
+  }
+
+  document.getElementById('welcome-heading').textContent = `Welcome back, ${me.name.split(' ')[0]}`;
+  if (me.role === 'admin') {
+    document.getElementById('admin-quick-link').style.display = 'block';
+  }
+
+  const loading = document.getElementById('loading');
+  const body = document.getElementById('dash-body');
+
+  try {
+    const { scans } = await Api.getScans();
+    loading.style.display = 'none';
+    body.style.display = 'block';
+    renderStats(scans);
+    renderRecent(scans.slice(0, 3));
+  } catch (err) {
+    loading.innerHTML = `<p class="muted">Could not load your activity: ${err.message}</p>`;
+  }
+
+  function renderStats(scans) {
+    const total = scans.length;
+    const lastScan = scans[0];
+    const avgSymmetry = total
+      ? Math.round(scans.reduce((sum, s) => sum + (s.symmetry_score || 0), 0) / total)
+      : null;
+
+    const counts = {};
+    scans.forEach((s) => {
+      if (s.dominant_expression) counts[s.dominant_expression] = (counts[s.dominant_expression] || 0) + 1;
+    });
+    const topEmotion = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+
+    const cards = [
+      ['Total scans', total],
+      ['Last scan', lastScan ? new Date(lastScan.created_at).toLocaleDateString() : '—'],
+      ['Most common emotion', topEmotion ? capWord(topEmotion[0]) : '—'],
+      ['Average symmetry', avgSymmetry != null ? `${avgSymmetry}/100` : '—']
+    ];
+
+    document.getElementById('stats-grid').innerHTML = cards
+      .map(
+        ([label, value]) => `
+        <div class="card">
+          <div class="muted" style="font-size:12.5px; margin-bottom:6px;">${label}</div>
+          <div style="font-family:var(--font-display); font-size:22px;">${value}</div>
+        </div>`
+      )
+      .join('');
+  }
+
+  function renderRecent(scans) {
+    const container = document.getElementById('recent-scans');
+    const empty = document.getElementById('no-scans');
+    if (!scans.length) {
+      container.style.display = 'none';
+      empty.style.display = 'block';
+      return;
+    }
+    container.innerHTML = scans
+      .map(
+        (s) => `
+      <a href="/history.html" class="card row" style="justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; text-decoration:none;">
+        <div class="row gap-16" style="align-items:center;">
+          ${s.thumbnail ? `<img src="${s.thumbnail}" style="width:48px; height:48px; object-fit:cover; border-radius:8px; border:1px solid var(--border);" />` : ''}
+          <div>
+            <div style="font-family:var(--font-display); font-size:14.5px; color:var(--text-primary);">${s.label || 'Scan'}</div>
+            <div class="muted" style="font-size:12px;">${new Date(s.created_at).toLocaleString()}</div>
+          </div>
+        </div>
+        ${emotionBadge(s.dominant_expression)}
+      </a>`
+      )
+      .join('');
+  }
+})();
+</script>
+</body>
+</html>

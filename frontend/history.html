@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>History — Mien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/index.html" class="brand"><span class="brand-mark"></span>Mien</a>
+    <div class="nav-links">
+     
+      <a href="/scan.html">Scan</a>
+      <a href="/history.html">History</a>
+    </div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<main class="wrap" style="padding:44px 24px 96px;">
+  <div style="max-width:640px; margin:0 auto 36px;" class="center">
+    <h1 style="font-size:28px;">Your scan history</h1>
+    <p>Every analysis you've chosen to save, most recent first. Click a card to reopen the full breakdown.</p>
+  </div>
+
+  <div id="loading" class="loader-stack"><div class="neon-ring-loader"></div></div>
+  <div id="empty" class="panel center" style="display:none; max-width:520px; margin:0 auto; padding:44px 24px;">
+    <p style="margin-bottom:18px;">No saved scans yet.</p>
+    <a href="/scan.html" class="btn btn-primary">Run your first scan</a>
+  </div>
+  <div id="scan-list" style="max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:14px;"></div>
+</main>
+
+<!-- Detail modal: reopens a saved scan's full breakdown using the same
+     renderer the dashboard uses (results-render.js) -->
+<div id="detail-modal" class="modal-backdrop" style="display:none;">
+  <div class="panel modal-box">
+    <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+      <h2 id="detail-title" style="font-size:19px; margin:0;">Scan detail</h2>
+      <button class="btn btn-ghost" id="detail-close" style="padding:6px 12px;">Close</button>
+    </div>
+    <p id="detail-date" class="muted" style="font-size:12.5px; margin-bottom:20px;"></p>
+    <div id="detail-thumb-wrap" style="text-align:center; margin-bottom:18px;"></div>
+    <div id="detail-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px;"></div>
+    <div id="detail-expressions" style="margin-top:22px;"></div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <p class="footer-disclaimer">Estimates only — not a medical, biometric-identity, or legal tool.</p>
+  <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/reference-data.js"></script>
+<script src="js/results-render.js"></script>
+<script>
+(async function () {
+  try {
+    await Api.me();
+  } catch (_) {
+    window.location.href = '/login.html?next=history';
+    return;
+  }
+
+  const loading = document.getElementById('loading');
+  const empty = document.getElementById('empty');
+  const list = document.getElementById('scan-list');
+  let scansById = {};
+
+  try {
+    const { scans } = await Api.getScans();
+    loading.style.display = 'none';
+
+    if (!scans.length) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    scansById = Object.fromEntries(scans.map((s) => [s.id, s]));
+    list.innerHTML = scans.map(renderScan).join('');
+
+    document.querySelectorAll('[data-delete]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-delete');
+        btn.disabled = true;
+        try {
+          await Api.deleteScan(id);
+          document.getElementById(`scan-${id}`).remove();
+          delete scansById[id];
+        } catch (err) {
+          alert(err.message);
+          btn.disabled = false;
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-open]').forEach((card) => {
+      card.addEventListener('click', () => openDetail(scansById[card.getAttribute('data-open')]));
+    });
+  } catch (err) {
+    loading.innerHTML = `<p class="muted">Could not load history: ${err.message}</p>`;
+  }
+
+  function renderScan(s) {
+    const date = new Date(s.created_at).toLocaleString();
+    return `
+      <div class="card history-card row" id="scan-${s.id}" data-open="${s.id}" style="justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+        <div class="row gap-16" style="align-items:center;">
+          ${s.thumbnail ? `<img src="${s.thumbnail}" style="width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid var(--border);" />` : ''}
+          <div>
+            <div style="font-family:var(--font-display); font-size:15px;">${s.label || 'Scan'}</div>
+            <div class="muted" style="font-size:12.5px;">${date}</div>
+          </div>
+        </div>
+        <div class="row gap-12" style="flex-wrap:wrap; align-items:center;">
+          ${emotionBadge(s.dominant_expression)}
+          <span class="muted" style="font-size:13.5px;">Age ~${Math.round(s.age)}</span>
+          <span class="muted" style="font-size:13.5px;">${s.face_shape || '—'}</span>
+        </div>
+        <button class="btn btn-danger-ghost" data-delete="${s.id}">Delete</button>
+      </div>`;
+  }
+
+  // ---------- detail modal ----------
+  const modal = document.getElementById('detail-modal');
+  document.getElementById('detail-close').addEventListener('click', closeDetail);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeDetail();
+  });
+
+  function openDetail(s) {
+    if (!s) return;
+    document.getElementById('detail-title').textContent = s.label || 'Scan';
+    document.getElementById('detail-date').textContent = new Date(s.created_at).toLocaleString();
+
+    const thumbWrap = document.getElementById('detail-thumb-wrap');
+    thumbWrap.innerHTML = s.thumbnail
+      ? `<img src="${s.thumbnail}" style="max-width:100%; max-height:220px; border-radius:var(--radius-md); border:1px solid var(--border);" />`
+      : '';
+
+    let expressions = {};
+    try {
+      expressions = JSON.parse(s.expressions_json || '{}');
+    } catch (_) {
+      expressions = {};
+    }
+
+    const result = {
+      age: s.age,
+      gender: s.gender,
+      genderProbability: s.gender_probability,
+      dominantExpression: s.dominant_expression,
+      expressions,
+      faceShape: s.face_shape,
+      faceShapeConfidence: s.face_shape_confidence,
+      symmetryScore: s.symmetry_score
+    };
+
+    renderAnalysisCard(document.getElementById('detail-grid'), document.getElementById('detail-expressions'), result);
+    modal.style.display = 'flex';
+  }
+
+  function closeDetail() {
+    modal.style.display = 'none';
+  }
+})();
+</script>
+</body>
+</html>
