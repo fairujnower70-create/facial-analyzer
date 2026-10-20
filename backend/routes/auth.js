@@ -3,9 +3,11 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db'); 
-const { JWT_SECRET } = require('../middleware/auth'); // মিডলওয়্যার থেকে সিক্রেট আনা
 
-// --- সাইনআপ (Signup) রুট ---
+// যদি এনভায়রনমেন্ট ভেরিয়েবলে JWT_SECRET না থাকে তবে ব্যাকআপ হিসেবে এটি কাজ করবে
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
+
+// --- সাইনআপ (Signup) রুট লজিক ---
 router.post('/signup', async (req, res) => {
     const { name, email, password } = req.body;
     try {
@@ -35,7 +37,7 @@ router.post('/signup', async (req, res) => {
     }
 });
 
-// --- লগইন (Login) রুট ---
+// --- লগইন (Login) রুট লজিক ---
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -45,9 +47,10 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Invalid email or password' });
         }
         
-        const user = result.rows[0];
+        const user = result.rows[0]; // প্রথম ম্যাচিং ইউজার অবজেক্ট নেওয়া
 
-        if (!(await bcrypt.compare(password, user.password))) {
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
             return res.status(400).json({ error: 'Invalid email or password' });
         }
 
@@ -68,5 +71,6 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
+
 
 
