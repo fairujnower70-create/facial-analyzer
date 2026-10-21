@@ -1,7 +1,17 @@
+
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
-const db = new Database(path.join(__dirname, 'data.sqlite'));
+const dbPath = process.env.DB_PATH ||
+  path.join(__dirname, 'data.sqlite');
+
+// Ensure the database directory exists.
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
+const db = new Database(dbPath);
+console.log(`[db] using database file: ${dbPath}`);
+
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
