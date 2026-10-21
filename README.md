@@ -8,7 +8,7 @@ neon-indigo SaaS look.
   [face-api.js](https://github.com/vladmandic/face-api) (loaded from a CDN).
   Face shape and symmetry are computed from the 68 landmark points with
   simple geometric heuristics.
-- **Backend**: Node.js + Express + SQLite (`better-sqlite3`). Handles
+- **Backend**: Node.js + Express + **PostgreSQL** (`pg`). Handles
   signup/login (JWT in an httpOnly cookie, passwords hashed with bcrypt) and
   stores each user's saved scan history.
 
@@ -25,21 +25,55 @@ neon-indigo SaaS look.
 | Admin panel | `/admin.html` — requires an admin-role account |
 | About | `/about.html` |
 
+## Environment variables
+
+Set these in `backend/.env` (local) or in your host's Environment settings.
+
+| Variable | Required | What it is |
+| --- | --- | --- |
+| `DATABASE_URL` | yes | PostgreSQL connection string (e.g. from Neon). |
+| `JWT_SECRET` | yes | A long random string used to sign login cookies. |
+| `NODE_ENV` | on a live site | Set to `production` online (makes cookies HTTPS-only). |
+| `ADMIN_EMAIL` | recommended | Only this email becomes admin. If empty, the first account ever created becomes admin. |
+| `PORT` | no | Hosts like Render set this automatically. Defaults to 4000. |
+
 ## Run it locally
+
+You need a PostgreSQL database. The easiest is a free [Neon](https://neon.tech)
+project: copy its connection string into `DATABASE_URL`.
 
 ```bash
 cd backend
-cp .env.example .env      # then edit JWT_SECRET to a long random string
+cp .env.example .env      # then fill in DATABASE_URL and JWT_SECRET
 npm install
 npm start
 ```
 
-The server serves both the API (`/api/...`) and the frontend, so once it's
-running, open:
+The tables are created automatically on first start. The server serves both
+the API (`/api/...`) and the frontend, so once it's running, open:
 
 ```
 http://localhost:4000
 ```
+
+## Deploy online (Render + Neon, both have free plans)
+
+1. **Neon**: create a project, then copy the connection string (it ends with
+   `?sslmode=require`). If it also contains `&channel_binding=require`, remove
+   that part.
+2. **Render**: New → Web Service → connect this GitHub repo.
+   - Root Directory: leave empty (the server also serves `../frontend`)
+   - Build Command: `cd backend && npm install`
+   - Start Command: `cd backend && npm start`
+   - Environment Variables: `DATABASE_URL`, `JWT_SECRET`, `NODE_ENV=production`,
+     and `ADMIN_EMAIL` (your own email).
+3. Open the Render URL and **sign up with the `ADMIN_EMAIL` address first** —
+   that account becomes the admin.
+
+Because the data lives in Neon (not on the web server's disk), accounts and
+scan history survive restarts and redeploys. On Render's free plan the app
+goes to sleep after ~15 minutes without visitors, so the first visit after a
+break takes about a minute to wake up.
 
 ## How analysis and storage work
 
@@ -48,9 +82,9 @@ http://localhost:4000
    a scan, then everything runs locally in your browser — the raw image is
    never sent to the backend.
 3. If you click **Save to history**, the *computed results* (age, gender,
-   expression scores, face shape, symmetry score, and an optional small
-   thumbnail) are POSTed to `/api/scans` and stored in SQLite, tied to your
-   account via the JWT cookie.
+   expression scores, face shape, symmetry score, and a small 320px JPEG
+   thumbnail) are POSTed to `/api/scans` and stored in PostgreSQL, tied to
+   your account via the JWT cookie.
 
 ## Accuracy notes
 
@@ -79,9 +113,11 @@ http://localhost:4000
 
 ## Admin panel
 
-The **first account created** on a fresh database is automatically made an
-admin. Log in with that account and an "Admin" link appears in the nav
-(also reachable directly at `/admin.html`). It shows:
+Who is admin: if `ADMIN_EMAIL` is set, only the account with that email is
+an admin. If it is not set, the **first account created** on an empty
+database is automatically made an admin. Log in with that account and an
+"Admin" link appears in the nav (also reachable directly at `/admin.html`).
+It shows:
 
 - account-wide stats (users, scans, scans today, new users this week)
 - an **emotion breakdown** across every logged scan
@@ -94,40 +130,34 @@ admin. Log in with that account and an "Admin" link appears in the nav
 Admin routes are protected server-side by a `role` check, not just hidden
 in the UI.
 
-To promote a different existing user to admin later, stop the server and
-run:
+To make a different existing user an admin, either set `ADMIN_EMAIL` to their
+email and restart, or run this in the Neon **SQL Editor**:
 
-```bash
-cd backend
-node -e "require('better-sqlite3')('data.sqlite').prepare(\"UPDATE users SET role='admin' WHERE email=?\").run('someone@example.com')"
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'someone@example.com';
 ```
 
-## Troubleshooting: "my scans aren't saving"
+(They need to log out and log in again for the new role to apply.)
 
-This is almost always one of two things:
+## Troubleshooting
 
-1. **A leftover `backend/data.sqlite` from an older version of this app.**
-   The database only adds new columns to a *brand-new* file — an existing
-   file from before doesn't get them automatically, so a save can fail
-   with a column-not-found error. Fixed in this version with an automatic
-   migration on startup, but if you're still stuck, the reliable fix is to
-   stop the server and delete `backend/data.sqlite` (and the `-wal`/`-shm`
-   files next to it), then restart — this resets all accounts and scans.
-2. **The frontend and backend aren't on the same origin.** If you're
-   opening the HTML files directly, or serving `frontend/` with a separate
-   tool (like a VS Code "Live Server" extension) instead of through the
-   Express server, the login cookie and `/api/...` calls won't line up.
-   Always open the app at the URL the backend prints
-   (`http://localhost:4000` by default) — not a different port.
-
-If a save still fails, the dashboard now shows the actual error message
-next to the "Save to history" button instead of failing silently.
+- **Deploy fails with "DATABASE_URL is not set"**: add it in Render →
+  Environment, then redeploy.
+- **"Could not connect to the database"** in the logs: re-copy the Neon
+  connection string; make sure it ends with `?sslmode=require` and has no
+  extra spaces.
+- **"my scans aren't saving"**: open the site through the URL the server
+  prints (not by double-clicking the HTML files or using a separate "Live
+  Server"), otherwise the login cookie and `/api/...` calls won't line up. The
+  Scan page shows the real error message next to "Save to history".
+- **I forgot who is admin**: run
+  `SELECT email, role FROM users;` in the Neon SQL Editor.
 
 ## Notes & limitations
 - This is a demo build: age/gender/expression are model estimates, and face
   shape/symmetry are simple heuristics — not clinical or forensic tools.
-- SQLite data lives in `backend/data.sqlite`; delete that file to reset all
-  users and scans.
+- All data lives in your PostgreSQL database; to reset everything, run
+  `DROP TABLE scans; DROP TABLE users;` and restart the server.
 - For production use you'd want: email verification, rate limiting on auth
-  routes, HTTPS, a stronger session strategy, and hosting the face-api.js
-  model weights yourself instead of a public CDN.
+  routes, a stronger session strategy, and hosting the face-api.js model
+  weights yourself instead of a public CDN.

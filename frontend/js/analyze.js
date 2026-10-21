@@ -365,6 +365,27 @@ function renderResults(r) {
 }
 
 // ---------- save ----------
+
+// Shrinks the preview photo to a small JPEG so it is always small enough to
+// store. (A raw webcam capture is a multi-megabyte PNG; it used to be larger
+// than the size limit and was silently dropped, so camera scans were saved
+// without their picture.) The analysis itself still runs on the full image.
+function makeThumbnail(imgEl, maxSide = 320, quality = 0.75) {
+  try {
+    const w = imgEl.naturalWidth;
+    const h = imgEl.naturalHeight;
+    if (!w || !h) return null;
+    const scale = Math.min(1, maxSide / Math.max(w, h));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(w * scale));
+    canvas.height = Math.max(1, Math.round(h * scale));
+    canvas.getContext('2d').drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', quality);
+  } catch (_) {
+    return null;
+  }
+}
+
 els.saveBtn.addEventListener('click', async () => {
   if (!lastResult) return;
   els.saveError.style.display = 'none';
@@ -374,7 +395,7 @@ els.saveBtn.addEventListener('click', async () => {
     await Api.saveScan({
       label: `Scan — ${new Date().toLocaleString()}`,
       ...lastResult,
-      thumbnail: els.previewImg.src.length < 400000 ? els.previewImg.src : null
+      thumbnail: makeThumbnail(els.previewImg)
     });
     els.saveBtn.textContent = 'Saved ✓';
   } catch (err) {

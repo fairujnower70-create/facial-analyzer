@@ -1,86 +1,111 @@
 const express = require('express');
 const db = require('../db');
+const asyncHandler = require('../middleware/asyncHandler');
 const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.use(requireAdmin);
 
-router.get('/stats', (req, res) => {
-  const totalUsers = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
-  const totalScans = db.prepare('SELECT COUNT(*) AS n FROM scans').get().n;
-  const scansToday = db
-    .prepare("SELECT COUNT(*) AS n FROM scans WHERE date(created_at) = date('now')")
-    .get().n;
-  const newUsersThisWeek = db
-    .prepare("SELECT COUNT(*) AS n FROM users WHERE created_at >= datetime('now', '-7 days')")
-    .get().n;
-  const expressionBreakdown = db
-    .prepare(
-      `SELECT dominant_expression AS expression, COUNT(*) AS count
-       FROM scans
-       WHERE dominant_expression IS NOT NULL
-       GROUP BY dominant_expression
-       ORDER BY count DESC`
-    )
-    .all();
-  const recentActivity = db
-    .prepare(
-      `SELECT s.id, s.dominant_expression, s.created_at, u.name AS user_name
-       FROM scans s JOIN users u ON u.id = s.user_id
-       ORDER BY s.created_at DESC
-       LIMIT 8`
-    )
-    .all();
+router.get(
+  '/stats',
+  asyncHandler(async (req, res) => {
+    const [users, scans, today, week, breakdown, recent] = await Promise.all([
+      db.query('SELECT COUNT(*)::int AS n FROM users'),
+      db.query('SELECT COUNT(*)::int AS n FROM scans'),
+      db.query('SELECT COUNT(*)::int AS n FROM scans WHERE created_at::date = CURRENT_DATE'),
+      db.query("SELECT COUNT(*)::int AS n FROM users WHERE created_at >= now() - interval '7 days'"),
+      db.query(
+        `SELECT dominant_expression AS expression, COUNT(*)::int AS count
+         FROM scans
+         WHERE dominant_expression IS NOT NULL
+         GROUP BY dominant_expression
+         ORDER BY count DESC`
+      ),
+      db.query(
+        `SELECT s.id, s.dominant_expression, s.created_at, u.name AS user_name
+         FROM scans s JOIN users u ON u.id = s.user_id
+         ORDER BY s.created_at DESC
+         LIMIT 8`
+      )
+    ]);
 
-  res.json({ totalUsers, totalScans, scansToday, newUsersThisWeek, expressionBreakdown, recentActivity });
-});
+    res.json({
+      totalUsers: users.rows[0].n,
+      totalScans: scans.rows[0].n,
+      scansToday: today.rows[0].n,
+      newUsersThisWeek: week.rows[0].n,
+      expressionBreakdown: breakdown.rows,
+      recentActivity: recent.rows
+    });
+  })
+);
 
-router.get('/users', (req, res) => {
-  const rows = db
-    .prepare(
+router.get(
+  '/users',
+  asyncHandler(async (req, res) => {
+    const result = await db.query(
       `SELECT u.id, u.name, u.email, u.role, u.created_at,
-              COUNT(s.id) AS scan_count
+              COUNT(s.id)::int AS scan_count
        FROM users u
        LEFT JOIN scans s ON s.user_id = u.id
        GROUP BY u.id
        ORDER BY u.created_at DESC`
-    )
-    .all();
-  res.json({ users: rows });
-});
+    );
+    res.json({ users: result.rows });
+  })
+);
 
-router.delete('/users/:id', (req, res) => {
-  const targetId = Number(req.params.id);
-  if (targetId === req.user.id) {
-    return res.status(400).json({ error: "You can't delete your own account from here" });
-  }
-  const info = db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
-  if (info.changes === 0) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-  res.json({ ok: true });
-});
+router.delete(
+  '/users/:id',
+  asyncHandler(async (req, res) => {
+    const targetId = Number(req.params.id);
+    if (!Number.isInteger(targetId)) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (targetId === req.user.id) {
+      return res.status(400).json({ error: "You can't delete your own account from here" });
+    }
+    const result = await db.query('DELETE FROM users WHERE id = $1', [targetId]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ ok: true });
+  })
+);
 
-router.get('/scans', (req, res) => {
-  const rows = db
-    .prepare(
-      `SELECT s.*, u.name AS user_name, u.email AS user_email
+// The admin table never shows photos, so thumbnails are left out here to keep
+// this response small (a page of 200 scans with photos could be tens of MB).
+router.get(
+  '/scans',
+  asyncHandler(async (req, res) => {
+    const result = await db.query(
+      `SELECT s.id, s.user_id, s.label, s.age, s.gender, s.gender_probability,
+              s.dominant_expression, s.expressions_json, s.face_shape,
+              s.face_shape_confidence, s.symmetry_score, s.landmarks_count,
+              s.created_at, u.name AS user_name, u.email AS user_email
        FROM scans s
        JOIN users u ON u.id = s.user_id
        ORDER BY s.created_at DESC
        LIMIT 200`
-    )
-    .all();
-  res.json({ scans: rows });
-});
+    );
+    res.json({ scans: result.rows });
+  })
+);
 
-router.delete('/scans/:id', (req, res) => {
-  const info = db.prepare('DELETE FROM scans WHERE id = ?').run(req.params.id);
-  if (info.changes === 0) {
-    return res.status(404).json({ error: 'Scan not found' });
-  }
-  res.json({ ok: true });
-});
+router.delete(
+  '/scans/:id',
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(404).json({ error: 'Scan not found' });
+    }
+    const result = await db.query('DELETE FROM scans WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Scan not found' });
+    }
+    res.json({ ok: true });
+  })
+);
 
 module.exports = router;

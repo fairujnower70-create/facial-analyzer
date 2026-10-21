@@ -1,77 +1,91 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+// PostgreSQL connection (works with Neon, Supabase, Render Postgres, or a
+// local Postgres). The connection string comes from DATABASE_URL.
+const { Pool } = require('pg');
+require('dotenv').config();
 
-const dbPath = process.env.DB_PATH ||
-  path.join(__dirname, 'data.sqlite');
+const connectionString = process.env.DATABASE_URL;
 
-// Ensure the database directory exists.
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-
-const db = new Database(dbPath);
-console.log(`[db] using database file: ${dbPath}`);
-
-
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'user',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+if (!connectionString) {
+  throw new Error(
+    'DATABASE_URL is not set. Add your Postgres connection string (for example from Neon) ' +
+      'to backend/.env locally, or to the Environment Variables on Render.'
   );
-
-  CREATE TABLE IF NOT EXISTS scans (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    label TEXT,
-    age REAL,
-    gender TEXT,
-    gender_probability REAL,
-    dominant_expression TEXT,
-    expressions_json TEXT,
-    face_shape TEXT,
-    face_shape_confidence REAL,
-    symmetry_score REAL,
-    landmarks_count INTEGER,
-    thumbnail TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  );
-`);
-
-// --- lightweight auto-migration -------------------------------------------
-// `CREATE TABLE IF NOT EXISTS` only applies to brand-new databases. If this
-// file already existed from an earlier version of the app (e.g. before the
-// `face_shape_confidence` or `role` columns existed), those columns would be
-// silently missing and every insert referencing them would fail — which is
-// exactly what breaks "save to history" after an update. This adds any
-// columns the current schema expects but an older data.sqlite doesn't have.
-function ensureColumn(table, column, definition) {
-  const existing = db.prepare(`PRAGMA table_info(${table})`).all();
-  const hasColumn = existing.some((col) => col.name === column);
-  if (!hasColumn) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-  }
 }
 
-ensureColumn('scans', 'face_shape_confidence', 'REAL');
-ensureColumn('users', 'role', "TEXT NOT NULL DEFAULT 'user'");
+// Hosted databases (Neon etc.) need SSL; a local Postgres usually does not.
+// If the connection string itself contains ?sslmode=..., that takes priority.
+const isLocal = /@(localhost|127\.0\.0\.1)(:|\/|$)/.test(connectionString);
 
-// The very first account created on a fresh database becomes an admin, so
-// there's always at least one way into /admin.html without manual SQL.
-function promoteFirstUserToAdmin() {
-  const hasAdmin = db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
-  if (hasAdmin) return;
-  const earliestUser = db.prepare('SELECT id FROM users ORDER BY id ASC LIMIT 1').get();
-  if (earliestUser) {
-    db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(earliestUser.id);
-  }
+const pool = new Pool({
+  connectionString,
+  ssl: isLocal ? false : { rejectUnauthorized: false },
+  max: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 15000
+});
+
+// Free hosted databases close idle connections. Without this handler that
+// would crash the whole server with an unhandled 'error' event.
+pool.on('error', (err) => {
+  console.error('[db] idle connection error (will reconnect):', err.message);
+});
+
+function query(text, params) {
+  return pool.query(text, params);
 }
-promoteFirstUserToAdmin();
 
-module.exports = db;
+// Creates the tables on first run and makes sure an admin exists.
+async function init() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS scans (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      label TEXT,
+      age DOUBLE PRECISION,
+      gender TEXT,
+      gender_probability DOUBLE PRECISION,
+      dominant_expression TEXT,
+      expressions_json TEXT,
+      face_shape TEXT,
+      face_shape_confidence DOUBLE PRECISION,
+      symmetry_score DOUBLE PRECISION,
+      landmarks_count INTEGER,
+      thumbnail TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_scans_user_created ON scans (user_id, created_at DESC)');
+
+  // Admin rules:
+  //  - If ADMIN_EMAIL is set, only that email is an admin (recommended for a
+  //    public website, so a stranger can't become admin by signing up first).
+  //  - If it is not set, the very first account ever created becomes admin.
+  const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  if (adminEmail) {
+    await pool.query("UPDATE users SET role = 'admin' WHERE lower(email) = $1", [adminEmail]);
+    console.log(`[db] admin email configured: ${adminEmail}`);
+  } else {
+    const hasAdmin = await pool.query("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1");
+    if (hasAdmin.rowCount === 0) {
+      await pool.query(
+        "UPDATE users SET role = 'admin' WHERE id = (SELECT id FROM users ORDER BY id ASC LIMIT 1)"
+      );
+    }
+  }
+
+  console.log('[db] connected to PostgreSQL and tables are ready');
+}
+
+module.exports = { pool, query, init };
