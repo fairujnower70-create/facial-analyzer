@@ -1,7 +1,7 @@
 // Minimal service worker: lets Mien install as an app and open instantly.
 // Never touches /api (login and scans always go to the server).
 const CACHE = 'mien-v1';
-const SHELL = ['index.html', 'css/style.css', 'js/api.js', 'js/nav.js', 'icons/icon-192.png'];
+const SHELL = ['/index.html', '/css/style.css', '/js/api.js', '/js/nav.js', '/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
