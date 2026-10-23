@@ -914,3 +914,122 @@ table thead th {
     animation-duration: 6s;
   }
 }
+
+
+/* ============================================================
+   History card (all sizes) + modern mobile app-style layer
+   ============================================================ */
+.history-card {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 16px;
+  align-items: center;
+}
+.hc-thumb img, .hc-noimg {
+  display: block;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+}
+.hc-title { font-family: var(--font-display); font-size: 15px; }
+.hc-date { font-size: 12.5px; margin-top: 2px; }
+.hc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 8px; font-size: 13px; }
+
+.tabbar { display: none; }
+
+@media (max-width: 720px) {
+  body.has-tabbar { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .tabbar {
+    display: flex;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    z-index: 60;
+    padding: 6px;
+    gap: 4px;
+    border-radius: 22px;
+    background: rgba(15, 23, 42, 0.82);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.08);
+  }
+  .tabbar a {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 4px;
+    border-radius: 16px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .tabbar a.active {
+    color: #fff;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.55), rgba(99, 102, 241, 0.4));
+    box-shadow: 0 4px 16px rgba(139, 92, 246, 0.35);
+  }
+  .nav.open ~ .tabbar { opacity: 0.35; pointer-events: none; }
+
+  /* history: compact tile, delete becomes a small icon-like chip */
+  .history-card { grid-template-columns: 56px 1fr; gap: 12px; padding: 14px; position: relative; }
+  .hc-thumb img, .hc-noimg { width: 56px; height: 56px; }
+  .hc-del { position: absolute; top: 10px; right: 10px; padding: 4px 10px !important; font-size: 11.5px !important; }
+  .hc-main { padding-right: 56px; min-width: 0; }
+
+  /* detail modal becomes a bottom sheet */
+  .modal-backdrop { align-items: flex-end; padding: 0; }
+  .modal-box { max-width: none; border-radius: 24px 24px 0 0; max-height: 90vh; padding: 22px 18px calc(24px + env(safe-area-inset-bottom)); }
+
+  /* tables -> stacked cards */
+  .panel:has(> table) { background: none; border: 0; box-shadow: none; overflow: visible !important; }
+  table, table tbody { display: block; width: 100%; }
+  table thead { display: none; }
+  table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+    margin-bottom: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md);
+    background: rgba(15, 23, 42, 0.6);
+  }
+  table tbody td {
+    display: block;
+    padding: 0 !important;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 13.5px;
+  }
+  table tbody td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  table tbody td:first-child,
+  table tbody td:last-child { grid-column: 1 / -1; }
+  table tbody td[colspan] { grid-column: 1 / -1; }
+  table tbody td:last-child button { width: 100%; }
+
+  /* admin search + export row */
+  #scan-search { width: 100%; min-width: 0 !important; flex: 1 1 100%; }
+  #export-csv, #export-json { flex: 1; }
+  .card:active, .btn:active { transform: scale(0.98); }
+}
+
+@media (display-mode: standalone) {
+  .nav { padding-top: env(safe-area-inset-top); }
+}

@@ -2,11 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>History — Mien</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Mien" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="/icons/icon-192.png" />
 </head>
 <body>
 
@@ -112,20 +120,18 @@
   function renderScan(s) {
     const date = new Date(s.created_at).toLocaleString();
     return `
-      <div class="card history-card row" id="scan-${s.id}" data-open="${s.id}" style="justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
-        <div class="row gap-16" style="align-items:center;">
-          ${s.thumbnail ? `<img src="${s.thumbnail}" style="width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid var(--border);" />` : ''}
-          <div>
-            <div style="font-family:var(--font-display); font-size:15px;">${s.label || 'Scan'}</div>
-            <div class="muted" style="font-size:12.5px;">${date}</div>
+      <div class="card history-card" id="scan-${s.id}" data-open="${s.id}">
+        <div class="hc-thumb">${s.thumbnail ? `<img src="${s.thumbnail}" alt="" />` : '<span class="hc-noimg"></span>'}</div>
+        <div class="hc-main">
+          <div class="hc-title">${s.label || 'Scan'}</div>
+          <div class="muted hc-date">${date}</div>
+          <div class="hc-meta">
+            ${emotionBadge(s.dominant_expression)}
+            <span class="muted">Age ~${Math.round(s.age)}</span>
+            <span class="muted">${s.face_shape || '—'}</span>
           </div>
         </div>
-        <div class="row gap-12" style="flex-wrap:wrap; align-items:center;">
-          ${emotionBadge(s.dominant_expression)}
-          <span class="muted" style="font-size:13.5px;">Age ~${Math.round(s.age)}</span>
-          <span class="muted" style="font-size:13.5px;">${s.face_shape || '—'}</span>
-        </div>
-        <button class="btn btn-danger-ghost" data-delete="${s.id}">Delete</button>
+        <button class="btn btn-danger-ghost hc-del" data-delete="${s.id}" aria-label="Delete scan">Delete</button>
       </div>`;
   }
 

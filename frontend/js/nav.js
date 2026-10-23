@@ -45,6 +45,31 @@
       window.location.href = '/index.html';
     });
 
+    // ---- mobile bottom tab bar (CSS shows it only on small screens) ----
+    if (!document.querySelector('.tabbar')) {
+      const icons = {
+        '/dashboard.html': '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+        '/scan.html': '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.2"/>',
+        '/history.html': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        '/admin.html': '<path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/>'
+      };
+      const items = [['/dashboard.html', 'Home'], ['/scan.html', 'Scan'], ['/history.html', 'History']];
+      if (user.role === 'admin') items.push(['/admin.html', 'Admin']);
+      const bar = document.createElement('nav');
+      bar.className = 'tabbar';
+      bar.setAttribute('aria-label', 'Main');
+      bar.innerHTML = items
+        .map(
+          ([href, label]) =>
+            `<a href="${href}"${location.pathname === href ? ' class="active" aria-current="page"' : ''}>` +
+            `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icons[href]}</svg>` +
+            `<span>${label}</span></a>`
+        )
+        .join('');
+      document.body.appendChild(bar);
+      document.body.classList.add('has-tabbar');
+    }
+
     // Best-effort — if this fails (e.g. offline), the nav just shows no badge.
     try {
       const { scans } = await Api.getScans();
@@ -62,3 +87,26 @@
     `;
   }
 })();
+
+// Tables turn into stacked cards on phones. Copy each header label onto its
+// cells (data-label) so the card can show "Age: 23" etc. Re-runs whenever
+// the page re-renders table rows (search, delete, load).
+(function labelTables() {
+  const apply = () => {
+    document.querySelectorAll('table').forEach((t) => {
+      const heads = Array.from(t.querySelectorAll('thead th')).map((h) => h.textContent.trim());
+      t.querySelectorAll('tbody tr').forEach((tr) => {
+        Array.from(tr.children).forEach((td, i) => {
+          if (heads[i] && td.getAttribute('data-label') !== heads[i]) td.setAttribute('data-label', heads[i]);
+        });
+      });
+    });
+  };
+  apply();
+  new MutationObserver(apply).observe(document.body, { childList: true, subtree: true });
+})();
+
+// Register the service worker so Mien can be installed on the home screen.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
