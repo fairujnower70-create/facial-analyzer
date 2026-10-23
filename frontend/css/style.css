@@ -687,9 +687,78 @@ table thead th {
   margin-left: 5px;
 }
 
+/* ---------- hamburger toggle (hidden on desktop) ---------- */
+.nav-toggle {
+  display: none;
+  width: 42px;
+  height: 42px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.1);
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.nav-toggle span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--text-primary);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.nav.open .nav-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav.open .nav-toggle span:nth-child(2) { opacity: 0; }
+.nav.open .nav-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
 @media (max-width: 720px) {
-  .nav-links { display: none; }
+  html, body { overflow-x: hidden; }
+  .nav-inner { flex-wrap: wrap; padding: 12px 16px; gap: 0; }
+  .nav-toggle { display: flex; }
+  .nav-links,
+  .nav-actions { display: none; width: 100%; }
+  .nav.open .nav-links {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding-top: 12px;
+  }
+  .nav.open .nav-links a {
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+  .nav.open .nav-links a:hover { background: rgba(139, 92, 246, 0.12); }
+  .nav.open .nav-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 0 6px;
+    margin-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .nav.open .nav-actions .btn { width: 100%; justify-content: center; padding: 13px 18px; }
+  .nav.open .nav-actions .muted { padding: 0 2px; }
+  .nav-dup { display: none !important; }
+  .wrap { padding: 0 16px; }
   .auth-card { padding: 28px 22px; }
+  .modal-backdrop { padding: 12px; }
+  .modal-box { padding: 22px 18px; }
+}
+@media (max-width: 720px) {
+  h1 { font-size: 34px !important; }
+  .row.gap-12 { flex-wrap: wrap; }
+  main > section > div, .hero-text { min-width: 0; }
+}
+@media (max-width: 360px) {
+  .scan-visual { --scan-size: 210px; }
+  h1 { font-size: 30px !important; }
 }
 
 /* ============================================================
