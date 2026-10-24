@@ -34,6 +34,17 @@ app.use('/api/admin', adminRoutes);
 
 // Serve the frontend as static files
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
+
+// Digital Asset Links: lets the installed Android app (made with PWABuilder)
+// open in full-screen without the browser address bar. The file is stored as
+// frontend/well-known/assetlinks.json (no leading dot, easy to upload to
+// GitHub) and served at the URL Android looks for.
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.type('application/json');
+  res.sendFile(path.join(FRONTEND_DIR, 'well-known', 'assetlinks.json'), (err) => {
+    if (err && !res.headersSent) res.status(404).json({ error: 'Not found' });
+  });
+});
 app.use(express.static(FRONTEND_DIR));
 
 // Fallback to index.html for the root
