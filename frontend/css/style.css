@@ -941,7 +941,7 @@ table thead th {
 .tabbar { display: none; }
 
 @media (max-width: 720px) {
-  body.has-tabbar { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  body.has-tabbar { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .tabbar {
     display: flex;
     position: fixed;
@@ -952,9 +952,7 @@ table thead th {
     padding: 6px;
     gap: 4px;
     border-radius: 22px;
-    background: rgba(15, 23, 42, 0.82);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    background: #111a2e; /* solid: some phones don't render blur, which made text show through */
     border: 1px solid var(--border-strong);
     box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.08);
   }
