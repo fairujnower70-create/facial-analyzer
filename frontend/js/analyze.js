@@ -143,6 +143,7 @@ els.resetBtn.addEventListener('click', () => {
   const ctx = els.overlayCanvas.getContext('2d');
   ctx.clearRect(0, 0, els.overlayCanvas.width, els.overlayCanvas.height);
   clearError();
+  if (typeof setMood === 'function') setMood(null);
 });
 
 function resetResultsPanel() {

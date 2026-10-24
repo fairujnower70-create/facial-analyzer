@@ -16,6 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<script src="/js/theme.js"></script>
 </head>
 <body>
 
@@ -60,7 +61,13 @@
       </div>
 
       <div id="camera-panel" style="display:none; text-align:center;">
-        <video id="webcam" autoplay playsinline muted style="width:100%; max-width:420px; border-radius:var(--radius-md); border:1px solid var(--border); background:#000;"></video>
+        <div class="live-frame" id="live-frame">
+          <video id="webcam" autoplay playsinline muted></video>
+          <canvas id="live-canvas"></canvas>
+          <div class="live-scanline"></div>
+          <span class="lc lc-tl"></span><span class="lc lc-tr"></span><span class="lc lc-bl"></span><span class="lc lc-br"></span>
+          <div class="live-status" id="live-status">Starting camera…</div>
+        </div>
         <div style="margin-top:16px;">
           <button class="btn btn-primary" id="capture-btn">Capture frame</button>
         </div>
@@ -126,5 +133,6 @@
 <script src="js/reference-data.js"></script>
 <script src="js/results-render.js"></script>
 <script src="js/analyze.js"></script>
+<script src="js/live-overlay.js"></script>
 </body>
 </html>

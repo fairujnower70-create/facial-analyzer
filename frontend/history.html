@@ -15,6 +15,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<script src="/js/theme.js"></script>
 </head>
 <body>
 
@@ -36,7 +37,7 @@
     <p>Every analysis you've chosen to save, most recent first. Click a card to reopen the full breakdown.</p>
   </div>
 
-  <div id="loading" class="loader-stack"><div class="neon-ring-loader"></div></div>
+  <div id="loading" class="skeleton-stack"><div class="skeleton sk-title"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
   <div id="empty" class="panel center" style="display:none; max-width:520px; margin:0 auto; padding:44px 24px;">
     <p style="margin-bottom:18px;">No saved scans yet.</p>
     <a href="/scan.html" class="btn btn-primary">Run your first scan</a>
@@ -101,7 +102,7 @@
         btn.disabled = true;
         try {
           await Api.deleteScan(id);
-          document.getElementById(`scan-${id}`).remove();
+          document.getElementById(`scan-${id}`).closest('.hc-wrap').remove();
           delete scansById[id];
         } catch (err) {
           alert(err.message);
@@ -111,15 +112,63 @@
     });
 
     document.querySelectorAll('[data-open]').forEach((card) => {
-      card.addEventListener('click', () => openDetail(scansById[card.getAttribute('data-open')]));
+      card.addEventListener('click', () => {
+        if (card.dataset.swiped) return; // a swipe is not a tap
+        openDetail(scansById[card.getAttribute('data-open')]);
+      });
+      enableSwipeDelete(card);
     });
   } catch (err) {
     loading.innerHTML = `<p class="muted">Could not load history: ${err.message}</p>`;
   }
 
+  // Swipe a card left (touch screens) to delete it.
+  function enableSwipeDelete(card) {
+    let x0 = 0, y0 = 0, dx = 0, tracking = false, horizontal = null;
+    const THRESHOLD = 90;
+    card.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      x0 = t.clientX; y0 = t.clientY; dx = 0; tracking = true; horizontal = null;
+      card.style.transition = 'none';
+    }, { passive: true });
+    card.addEventListener('touchmove', (e) => {
+      if (!tracking) return;
+      const t = e.touches[0];
+      const mx = t.clientX - x0, my = t.clientY - y0;
+      if (horizontal === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) horizontal = Math.abs(mx) > Math.abs(my);
+      if (!horizontal) return;
+      dx = Math.min(0, mx);
+      card.style.transform = `translateX(${dx}px)`;
+      card.parentElement.classList.toggle('armed', dx < -THRESHOLD);
+    }, { passive: true });
+    card.addEventListener('touchend', () => {
+      if (!tracking) return;
+      tracking = false;
+      card.style.transition = 'transform 0.25s ease';
+      if (horizontal && dx < -THRESHOLD) {
+        card.dataset.swiped = '1';
+        setTimeout(() => delete card.dataset.swiped, 400);
+        card.style.transform = 'translateX(-30px)';
+        if (confirm('Delete this scan?')) {
+          card.querySelector('[data-delete]').click();
+        } else {
+          card.style.transform = '';
+        }
+      } else {
+        if (horizontal) {
+          card.dataset.swiped = '1';
+          setTimeout(() => delete card.dataset.swiped, 400);
+        }
+        card.style.transform = '';
+      }
+      card.parentElement.classList.remove('armed');
+    });
+  }
+
   function renderScan(s) {
     const date = new Date(s.created_at).toLocaleString();
     return `
+      <div class="hc-wrap"><div class="hc-swipe-bg">Delete</div>
       <div class="card history-card" id="scan-${s.id}" data-open="${s.id}">
         <div class="hc-thumb">${s.thumbnail ? `<img src="${s.thumbnail}" alt="" />` : '<span class="hc-noimg"></span>'}</div>
         <div class="hc-main">
@@ -132,7 +181,7 @@
           </div>
         </div>
         <button class="btn btn-danger-ghost hc-del" data-delete="${s.id}" aria-label="Delete scan">Delete</button>
-      </div>`;
+      </div></div>`;
   }
 
   // ---------- detail modal ----------

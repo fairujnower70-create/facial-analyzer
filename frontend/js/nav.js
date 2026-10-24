@@ -14,6 +14,29 @@
     toggle.setAttribute('aria-label', 'Open menu');
     toggle.setAttribute('aria-expanded', 'false');
     toggle.innerHTML = '<span></span><span></span><span></span>';
+    // light / dark switch
+    const themeBtn = document.createElement('button');
+    themeBtn.type = 'button';
+    themeBtn.className = 'theme-toggle';
+    const sunMoon = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle class="tt-sun" cx="12" cy="12" r="4"/><path class="tt-rays" d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/><path class="tt-moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+    themeBtn.innerHTML = sunMoon;
+    const paintTheme = () => {
+      const light = document.documentElement.getAttribute('data-theme') === 'light';
+      themeBtn.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
+      themeBtn.title = themeBtn.getAttribute('aria-label');
+      themeBtn.classList.toggle('is-light', light);
+    };
+    themeBtn.addEventListener('click', () => {
+      const light = document.documentElement.getAttribute('data-theme') !== 'light';
+      if (light) document.documentElement.setAttribute('data-theme', 'light');
+      else document.documentElement.removeAttribute('data-theme');
+      try { localStorage.setItem('mien-theme', light ? 'light' : 'dark'); } catch (_) {}
+      const m = document.querySelector('meta[name="theme-color"]');
+      if (m) m.setAttribute('content', light ? '#f1f5f9' : '#0f172a');
+      paintTheme();
+    });
+    paintTheme();
+    inner.insertBefore(themeBtn, inner.querySelector('.nav-links') || actions);
     inner.insertBefore(toggle, inner.querySelector('.nav-links') || actions);
     const setOpen = (open) => {
       nav.classList.toggle('open', open);
@@ -110,3 +133,61 @@
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
+
+// ---------- desktop + general polish (all display-only) ----------
+(function polish() {
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // nav gets a soft shadow once you scroll
+  const nav = document.querySelector('.nav');
+  if (nav) {
+    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  // cursor-following spotlight on cards and panels (mouse only)
+  if (!reduce && window.matchMedia('(hover: hover)').matches) {
+    document.addEventListener('pointermove', (e) => {
+      const el = e.target.closest && e.target.closest('.card, .panel');
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+      el.style.setProperty('--my', `${e.clientY - r.top}px`);
+    }, { passive: true });
+  }
+
+  // pull-to-refresh when running as an installed app (browsers have their own)
+  const isApp =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (document.referrer || '').startsWith('android-app://') ||
+    window.navigator.standalone === true;
+  if (isApp && 'ontouchstart' in window) {
+    const ind = document.createElement('div');
+    ind.className = 'ptr';
+    ind.innerHTML = '<span></span>';
+    document.body.appendChild(ind);
+    let y0 = 0, pull = 0, active = false;
+    window.addEventListener('touchstart', (e) => {
+      if (window.scrollY === 0 && !e.target.closest('.modal-box')) { y0 = e.touches[0].clientY; active = true; pull = 0; }
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+      if (!active) return;
+      pull = Math.max(0, Math.min(110, (e.touches[0].clientY - y0) * 0.5));
+      ind.style.transform = `translate(-50%, ${pull - 40}px) rotate(${pull * 4}deg)`;
+      ind.style.opacity = String(Math.min(1, pull / 50));
+      ind.classList.toggle('ready', pull > 60);
+    }, { passive: true });
+    window.addEventListener('touchend', () => {
+      if (!active) return;
+      active = false;
+      if (pull > 60) {
+        ind.classList.add('spin');
+        setTimeout(() => location.reload(), 250);
+      } else {
+        ind.style.transform = 'translate(-50%, -40px)';
+        ind.style.opacity = '0';
+      }
+    });
+  }
+})();

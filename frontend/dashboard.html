@@ -15,6 +15,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<script src="/js/theme.js"></script>
 </head>
 <body>
 
@@ -32,7 +33,7 @@
 
 <main class="wrap" style="padding:44px 24px 96px;">
 
-  <div id="loading" class="loader-stack"><div class="neon-ring-loader"></div></div>
+  <div id="loading" class="skeleton-stack"><div class="skeleton sk-title"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
 
   <div id="dash-body" style="display:none; max-width:1040px; margin:0 auto;">
 
@@ -72,6 +73,13 @@
     <h2 style="font-size:18px; margin-bottom:14px;">Your activity</h2>
     <div id="stats-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:36px;"></div>
 
+    <!-- insights -->
+    <h2 style="font-size:18px; margin-bottom:14px;">Insights</h2>
+    <div class="chart-grid">
+      <section class="panel chart-panel"><h3>Emotion mix</h3><div id="chart-emotions"></div></section>
+      <section class="panel chart-panel"><h3>Symmetry over time</h3><div id="chart-trend"></div></section>
+    </div>
+
     <!-- recent scans -->
     <h2 style="font-size:18px; margin-bottom:14px;">Recent scans</h2>
     <div id="recent-scans" style="display:flex; flex-direction:column; gap:12px;"></div>
@@ -92,6 +100,7 @@
 <script src="js/nav.js"></script>
 <script src="js/reference-data.js"></script>
 <script src="js/results-render.js"></script>
+<script src="js/charts.js"></script>
 <script>
 (async function () {
   let me;
@@ -116,6 +125,7 @@
     body.style.display = 'block';
     renderStats(scans);
     renderRecent(scans.slice(0, 3));
+    renderCharts(scans);
   } catch (err) {
     loading.innerHTML = `<p class="muted">Could not load your activity: ${err.message}</p>`;
   }
