@@ -26,6 +26,7 @@
      
       <a href="/scan.html">Scan</a>
       <a href="/history.html">History</a>
+      <a href="/journal.html">Journal</a>
       
     </div>
     <div class="nav-actions" id="nav-actions"></div>
@@ -58,6 +59,12 @@
         <div id="recent-activity" style="display:flex; flex-direction:column; gap:10px;"></div>
       </section>
     </div>
+
+    <section id="resets-section" style="margin-bottom:48px; display:none;">
+      <h2 style="font-size:19px; margin-bottom:6px;">Password reset requests</h2>
+      <p style="font-size:13.5px; margin-bottom:14px;">These users forgot their password. Generate a temporary password and send it to them (WhatsApp, SMS…).</p>
+      <div id="resets-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </section>
 
     <section style="margin-bottom:48px;">
       <h2 style="font-size:19px; margin-bottom:16px;">Users</h2>
@@ -108,6 +115,19 @@
   </div>
 </main>
 
+<div id="temp-modal" class="modal-backdrop" style="display:none;">
+  <div class="panel modal-box" style="max-width:440px; text-align:center;">
+    <h2 style="font-size:19px;">Temporary password</h2>
+    <p id="temp-for" style="font-size:13.5px;"></p>
+    <div id="temp-pw" style="font-family:monospace; font-size:26px; letter-spacing:2px; padding:16px; margin:14px 0; border-radius:12px; background:var(--bg-input); user-select:all; overflow-wrap:anywhere;"></div>
+    <p style="font-size:12.5px;">Shown only once. Give it to the user; they can change it under <b>Account</b>.</p>
+    <div class="row gap-12" style="justify-content:center; margin-top:14px;">
+      <button class="btn btn-primary" id="temp-copy">Copy</button>
+      <button class="btn btn-ghost" id="temp-close">Close</button>
+    </div>
+  </div>
+</div>
+
 <footer class="site-footer">
   <p class="footer-disclaimer">Admin access is limited to accounts with the "admin" role.</p>
   <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
@@ -139,7 +159,7 @@
   }
 
   try {
-    const [stats, usersRes, scansRes] = await Promise.all([Api.adminStats(), Api.adminUsers(), Api.adminScans()]);
+    const [stats, usersRes, scansRes, resetsRes] = await Promise.all([Api.adminStats(), Api.adminUsers(), Api.adminScans(), Api.adminResets().catch(() => ({ requests: [] }))]);
     loading.style.display = 'none';
     body.style.display = 'block';
     allScans = scansRes.scans;
@@ -147,6 +167,7 @@
     renderBreakdown(stats.expressionBreakdown || []);
     renderActivity(stats.recentActivity || []);
     renderUsers(usersRes.users);
+    renderResets(resetsRes.requests);
     renderScans(allScans);
   } catch (err) {
     loading.innerHTML = `<p class="muted">Could not load admin data: ${err.message}</p>`;
@@ -228,11 +249,14 @@
           <td style="padding:12px 16px;">${u.scan_count}</td>
           <td style="padding:12px 16px;" class="muted">${new Date(u.created_at).toLocaleDateString()}</td>
           <td style="padding:12px 16px;">
+            <button class="btn btn-ghost" style="padding:6px 12px; font-size:12.5px;" data-reset-user="${u.id}">Reset password</button>
             ${u.id === me.id ? '' : `<button class="btn btn-danger-ghost" style="padding:6px 12px; font-size:12.5px;" data-del-user="${u.id}">Delete</button>`}
           </td>
         </tr>`
       )
       .join('');
+
+    bindResetButtons();
 
     document.querySelectorAll('[data-del-user]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -248,6 +272,59 @@
       });
     });
   }
+
+  // ---------- password resets ----------
+  function renderResets(requests) {
+    const section = document.getElementById('resets-section');
+    const list = document.getElementById('resets-list');
+    if (!requests.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = requests
+      .map(
+        (r) => `
+      <div class="card row" id="reset-${r.id}" style="justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div><div style="font-family:var(--font-display);">${escapeHtml(r.name)}</div>
+        <div class="muted" style="font-size:12.5px;">${escapeHtml(r.email)} · ${new Date(r.created_at).toLocaleString()}</div></div>
+        <button class="btn btn-primary" style="padding:8px 14px; font-size:13px;" data-reset-user="${r.user_id}" data-reset-req="${r.id}">Generate temp password</button>
+      </div>`
+      )
+      .join('');
+    bindResetButtons();
+  }
+
+  function bindResetButtons() {
+    document.querySelectorAll('[data-reset-user]:not([data-bound])').forEach((btn) => {
+      btn.setAttribute('data-bound', '1');
+      btn.addEventListener('click', async () => {
+        if (!confirm('Generate a new temporary password? The old password will stop working.')) return;
+        btn.disabled = true;
+        try {
+          const res = await Api.adminResetPassword(btn.getAttribute('data-reset-user'));
+          document.getElementById('temp-for').textContent = `${res.name} (${res.email})`;
+          document.getElementById('temp-pw').textContent = res.temporaryPassword;
+          document.getElementById('temp-modal').style.display = 'flex';
+          document.querySelectorAll(`[data-reset-user="${btn.getAttribute('data-reset-user')}"][data-reset-req]`).forEach((b) => {
+            const row = b.closest('.card');
+            if (row) row.remove();
+          });
+          if (!document.querySelector('#resets-list > *')) document.getElementById('resets-section').style.display = 'none';
+        } catch (err) {
+          alert(err.message);
+        }
+        btn.disabled = false;
+      });
+    });
+  }
+  document.getElementById('temp-close').addEventListener('click', () => {
+    document.getElementById('temp-modal').style.display = 'none';
+    document.getElementById('temp-pw').textContent = '';
+  });
+  document.getElementById('temp-copy').addEventListener('click', () => {
+    const t = document.getElementById('temp-pw').textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(t).catch(() => {});
+    document.getElementById('temp-copy').textContent = 'Copied ✓';
+    setTimeout(() => (document.getElementById('temp-copy').textContent = 'Copy'), 1500);
+  });
 
   // ---------- scans table ----------
   function renderScans(scans) {

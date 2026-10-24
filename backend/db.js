@@ -68,6 +68,17 @@ async function init() {
 
   await pool.query('CREATE INDEX IF NOT EXISTS idx_scans_user_created ON scans (user_id, created_at DESC)');
 
+  // "Forgot password" requests. There is no email service, so a request just
+  // shows up for the admin, who then hands the user a temporary password.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reset_requests (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      handled_at TIMESTAMPTZ
+    )
+  `);
+
   // Admin rules:
   //  - If ADMIN_EMAIL is set, only that email is an admin (recommended for a
   //    public website, so a stranger can't become admin by signing up first).

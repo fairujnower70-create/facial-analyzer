@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Forgot password — Mien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Mien" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<script src="/js/theme.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/index.html" class="brand"><span class="brand-mark"></span>Mien</a>
+    <div class="nav-links"></div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<div class="auth-shell">
+  <div class="panel auth-card">
+    <h1>Forgot password?</h1>
+    <p style="margin-bottom:22px;">Enter your account email. Your request goes to the Mien admin, who will give you a temporary password. You can change it afterwards in <b>Account</b>.</p>
+
+    <div class="form-error" id="form-error"></div>
+    <div class="form-success" id="form-success" style="display:none;"></div>
+
+    <form id="forgot-form">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="email" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="submit-btn"><span id="submit-label">Send request</span></button>
+    </form>
+
+    <div class="auth-switch">Remembered it? <a href="/login.html">Back to log in</a></div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const form = document.getElementById('forgot-form');
+  const errorBox = document.getElementById('form-error');
+  const okBox = document.getElementById('form-success');
+  const btn = document.getElementById('submit-btn');
+  const label = document.getElementById('submit-label');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorBox.classList.remove('visible');
+    btn.disabled = true;
+    label.innerHTML = '<span class="neon-ring-loader sm"></span>';
+    try {
+      await Api.forgot(form.email.value.trim());
+      okBox.textContent = 'Request sent. If that email has an account, the admin will see your request and can give you a temporary password.';
+      okBox.style.display = 'block';
+      form.style.display = 'none';
+    } catch (err) {
+      errorBox.textContent = err.message;
+      errorBox.classList.add('visible');
+      btn.disabled = false;
+      label.textContent = 'Send request';
+    }
+  });
+</script>
+
+<footer class="site-footer">
+  <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
+</footer>
+</body>
+</html>

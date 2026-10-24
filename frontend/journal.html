@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Journal — Mien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Mien" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<script src="/js/theme.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/index.html" class="brand"><span class="brand-mark"></span>Mien</a>
+    <div class="nav-links">
+      <a href="/scan.html">Scan</a>
+      <a href="/history.html">History</a>
+      <a href="/journal.html">Journal</a>
+    </div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<main class="wrap" style="padding:44px 24px 96px;">
+  <div style="max-width:760px; margin:0 auto;">
+    <div class="center" style="margin-bottom:28px;">
+      <h1 style="font-size:28px;">Mood journal</h1>
+      <p>One scan a day builds your streak. Each day is coloured by your most common emotion.</p>
+    </div>
+
+    <div id="loading" class="skeleton-stack"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+
+    <div id="journal-body" style="display:none;">
+      <div id="streak-grid" class="streak-grid"></div>
+
+      <div class="panel" style="padding:22px; margin-top:18px;">
+        <div class="cal-head">
+          <button class="btn btn-ghost cal-nav" id="cal-prev" aria-label="Previous month">‹</button>
+          <h2 id="cal-title" style="font-size:18px; margin:0;"></h2>
+          <button class="btn btn-ghost cal-nav" id="cal-next" aria-label="Next month">›</button>
+        </div>
+        <div class="cal-dow"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+        <div id="cal-grid" class="cal-grid"></div>
+        <ul id="cal-legend" class="chart-legend cal-legend"></ul>
+      </div>
+
+      <div id="day-detail" class="panel" style="padding:20px; margin-top:18px; display:none;"></div>
+
+      <div id="empty-note" class="panel center" style="display:none; padding:34px 24px; margin-top:18px;">
+        <p style="margin-bottom:16px;">No saved scans yet. Run a scan and tap <b>Save to history</b> to start your journal.</p>
+        <a href="/scan.html" class="btn btn-primary">Run a scan</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <p class="footer-disclaimer">Estimates only — not a medical, biometric-identity, or legal tool.</p>
+  <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/reference-data.js"></script>
+<script src="js/results-render.js"></script>
+<script>
+(async function () {
+  try { await Api.me(); } catch (_) { window.location.href = '/login.html?next=dashboard'; return; }
+
+  let scans = [];
+  try { scans = (await Api.getScans()).scans; }
+  catch (err) { document.getElementById('loading').innerHTML = `<p class="muted center">Could not load your journal: ${err.message}</p>`; return; }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('journal-body').style.display = 'block';
+  if (!scans.length) document.getElementById('empty-note').style.display = 'block';
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const keyOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  // group scans by local day
+  const byDay = {};
+  scans.forEach((s) => { (byDay[keyOf(new Date(s.created_at))] = byDay[keyOf(new Date(s.created_at))] || []).push(s); });
+
+  function dominantOf(list) {
+    const c = {};
+    list.forEach((s) => { if (s.dominant_expression) c[s.dominant_expression] = (c[s.dominant_expression] || 0) + 1; });
+    const top = Object.entries(c).sort((a, b) => b[1] - a[1])[0];
+    return top ? top[0] : null;
+  }
+
+  // ---- streaks ----
+  const days = Object.keys(byDay).sort();
+  const dayNum = (k) => { const [y, m, d] = k.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / 86400000); };
+  let best = 0, run = 0, prev = null;
+  days.forEach((k) => { run = prev !== null && dayNum(k) - prev === 1 ? run + 1 : 1; best = Math.max(best, run); prev = dayNum(k); });
+  const today = dayNum(keyOf(new Date()));
+  let current = 0;
+  if (days.length) {
+    let cursor = byDay[keyOf(new Date())] ? today : today - 1; // today not scanned yet? streak is still alive until tomorrow
+    const set = new Set(days.map(dayNum));
+    while (set.has(cursor)) { current++; cursor--; }
+  }
+  const thisMonthCount = scans.filter((s) => { const d = new Date(s.created_at), n = new Date(); return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear(); }).length;
+
+  const tiles = [
+    ['🔥', 'Current streak', `<span data-count="${current}">${current}</span> day${current === 1 ? '' : 's'}`],
+    ['🏆', 'Best streak', `<span data-count="${best}">${best}</span> day${best === 1 ? '' : 's'}`],
+    ['📅', 'Days scanned', `<span data-count="${days.length}">${days.length}</span>`],
+    ['✨', 'This month', `<span data-count="${thisMonthCount}">${thisMonthCount}</span> scans`]
+  ];
+  const grid = document.getElementById('streak-grid');
+  grid.innerHTML = tiles.map(([ico, label, val]) => `<div class="card streak-tile"><div class="st-ico">${ico}</div><div class="muted" style="font-size:12.5px;">${label}</div><div class="st-val">${val}</div></div>`).join('');
+  animateResults(grid);
+
+  // ---- calendar ----
+  let view = new Date(); view.setDate(1);
+  const grid2 = document.getElementById('cal-grid');
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  function renderCal() {
+    document.getElementById('cal-title').textContent = `${MONTHS[view.getMonth()]} ${view.getFullYear()}`;
+    const first = new Date(view.getFullYear(), view.getMonth(), 1);
+    const count = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+    const todayKey = keyOf(new Date());
+    let html = '';
+    for (let i = 0; i < first.getDay(); i++) html += '<span class="cal-cell empty"></span>';
+    for (let d = 1; d <= count; d++) {
+      const k = `${view.getFullYear()}-${pad(view.getMonth() + 1)}-${pad(d)}`;
+      const list = byDay[k];
+      const emo = list ? dominantOf(list) : null;
+      const color = emo ? emotionColor(emo) : null;
+      html += `<button type="button" class="cal-cell${list ? ' has' : ''}${k === todayKey ? ' today' : ''}" data-day="${k}" ${list ? '' : 'tabindex="-1"'}
+        style="${color ? `--c:${color};` : ''}" title="${list ? list.length + ' scan(s)' + (emo ? ' · ' + capWord(emo) : '') : ''}">${d}${list && list.length > 1 ? `<i>${list.length}</i>` : ''}</button>`;
+    }
+    grid2.innerHTML = html;
+    grid2.querySelectorAll('.cal-cell.has').forEach((b) => b.addEventListener('click', () => showDay(b.getAttribute('data-day'))));
+  }
+  document.getElementById('cal-prev').addEventListener('click', () => { view.setMonth(view.getMonth() - 1); renderCal(); });
+  document.getElementById('cal-next').addEventListener('click', () => { view.setMonth(view.getMonth() + 1); renderCal(); });
+  renderCal();
+
+  const used = [...new Set(scans.map((s) => s.dominant_expression).filter(Boolean))];
+  document.getElementById('cal-legend').innerHTML = used.map((n) => `<li><span class="dot" style="background:${emotionColor(n)}"></span>${capWord(n)}</li>`).join('');
+
+  function showDay(k) {
+    const list = byDay[k]; const box = document.getElementById('day-detail');
+    const [y, m, d] = k.split('-').map(Number);
+    box.style.display = 'block';
+    box.innerHTML = `<h3 style="font-size:16px; margin-bottom:12px;">${MONTHS[m - 1]} ${d}, ${y}</h3>` + list.map((s) => `
+      <a href="/history.html" class="row" style="gap:12px; align-items:center; padding:8px 0; text-decoration:none; border-top:1px solid var(--border);">
+        ${s.thumbnail ? `<img src="${s.thumbnail}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover;" />` : ''}
+        <div style="flex:1;"><div style="color:var(--text-primary); font-size:14px;">${new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · Age ~${Math.round(s.age)}</div>
+        <div class="muted" style="font-size:12.5px;">Symmetry ${s.symmetry_score != null ? Math.round(s.symmetry_score) : '—'}/100 · ${s.face_shape || '—'}</div></div>
+        ${emotionBadge(s.dominant_expression)}
+      </a>`).join('');
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+})();
+</script>
+</body>
+</html>

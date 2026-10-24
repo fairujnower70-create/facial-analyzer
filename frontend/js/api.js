@@ -30,12 +30,16 @@ const Api = {
   login: (payload) => apiRequest('/auth/login', { method: 'POST', body: payload }),
   logout: () => apiRequest('/auth/logout', { method: 'POST' }),
   me: () => apiRequest('/auth/me'),
+  forgot: (email) => apiRequest('/auth/forgot', { method: 'POST', body: { email } }),
+  changePassword: (payload) => apiRequest('/auth/change-password', { method: 'POST', body: payload }),
   saveScan: (payload) => apiRequest('/scans', { method: 'POST', body: payload }),
   getScans: () => apiRequest('/scans'),
   deleteScan: (id) => apiRequest(`/scans/${id}`, { method: 'DELETE' }),
   adminStats: () => apiRequest('/admin/stats'),
   adminUsers: () => apiRequest('/admin/users'),
   adminDeleteUser: (id) => apiRequest(`/admin/users/${id}`, { method: 'DELETE' }),
+  adminResets: () => apiRequest('/admin/resets'),
+  adminResetPassword: (id) => apiRequest(`/admin/users/${id}/reset-password`, { method: 'POST' }),
   adminScans: () => apiRequest('/admin/scans'),
   adminDeleteScan: (id) => apiRequest(`/admin/scans/${id}`, { method: 'DELETE' })
 };

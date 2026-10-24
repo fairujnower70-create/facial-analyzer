@@ -94,6 +94,64 @@ router.post(
   })
 );
 
+// Very small in-memory limiter so the forgot-password form can't be spammed.
+const forgotHits = new Map();
+function tooManyForgots(ip) {
+  const now = Date.now();
+  const hits = (forgotHits.get(ip) || []).filter((t) => now - t < 60 * 60 * 1000);
+  hits.push(now);
+  forgotHits.set(ip, hits);
+  return hits.length > 8;
+}
+
+// Always answers the same way, so it can't be used to discover which emails exist.
+router.post(
+  '/forgot',
+  asyncHandler(async (req, res) => {
+    if (tooManyForgots(req.ip)) {
+      return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    }
+    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
+    }
+    const found = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (found.rowCount > 0) {
+      const userId = found.rows[0].id;
+      const pending = await db.query(
+        'SELECT 1 FROM reset_requests WHERE user_id = $1 AND handled_at IS NULL',
+        [userId]
+      );
+      if (pending.rowCount === 0) {
+        await db.query('INSERT INTO reset_requests (user_id) VALUES ($1)', [userId]);
+      }
+    }
+    res.json({ ok: true });
+  })
+);
+
+router.post(
+  '/change-password',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current and new password are required' });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    }
+    const result = await db.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    const row = result.rows[0];
+    if (!row || !(await bcrypt.compare(currentPassword, row.password_hash))) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+    const hash = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+    res.json({ ok: true });
+  })
+);
+
 router.post('/logout', (req, res) => {
   res.clearCookie('token', COOKIE_OPTS);
   res.json({ ok: true });

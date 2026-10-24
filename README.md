@@ -75,6 +75,16 @@ scan history survive restarts and redeploys. On Render's free plan the app
 goes to sleep after ~15 minutes without visitors, so the first visit after a
 break takes about a minute to wake up.
 
+## Extra features
+
+- **Forgot password**: there is no email service, so a request from `/forgot.html`
+  appears in the **Admin panel → Password reset requests**. The admin generates a
+  temporary password (shown once) and gives it to the user, who can change it on
+  `/account.html`. The admin can also reset any user from the Users table.
+- **Mood journal** (`/journal.html`): daily streak and a calendar coloured by emotion.
+- **Compare scans** and **Share** (image card) in History; **Scan all faces** for group photos.
+- **Light / dark theme** toggle in the navbar.
+
 ## How analysis and storage work
 
 1. You upload a photo or capture a webcam frame.

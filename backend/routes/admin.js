@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const express = require('express');
 const db = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -71,6 +73,45 @@ router.delete(
       return res.status(404).json({ error: 'User not found' });
     }
     res.json({ ok: true });
+  })
+);
+
+// ---------- password reset requests ----------
+
+router.get(
+  '/resets',
+  asyncHandler(async (req, res) => {
+    const result = await db.query(
+      `SELECT r.id, r.created_at, u.id AS user_id, u.name, u.email
+       FROM reset_requests r JOIN users u ON u.id = r.user_id
+       WHERE r.handled_at IS NULL
+       ORDER BY r.created_at DESC`
+    );
+    res.json({ requests: result.rows });
+  })
+);
+
+// Sets a new random temporary password and returns it ONCE so the admin can
+// pass it to the user (who can then change it on the Account page).
+router.post(
+  '/users/:id/reset-password',
+  asyncHandler(async (req, res) => {
+    const targetId = Number(req.params.id);
+    if (!Number.isInteger(targetId)) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = crypto.randomBytes(10);
+    let temp = '';
+    for (const b of bytes) temp += alphabet[b % alphabet.length];
+
+    const hash = await bcrypt.hash(temp, 10);
+    const result = await db.query('UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING name, email', [hash, targetId]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    await db.query('UPDATE reset_requests SET handled_at = now() WHERE user_id = $1 AND handled_at IS NULL', [targetId]);
+    res.json({ ok: true, temporaryPassword: temp, name: result.rows[0].name, email: result.rows[0].email });
   })
 );
 

@@ -27,6 +27,7 @@
       
       <a href="/scan.html">Scan</a>
       <a href="/history.html">History</a>
+      <a href="/journal.html">Journal</a>
     </div>
     <div class="nav-actions" id="nav-actions"></div>
   </div>
@@ -107,6 +108,7 @@
           <h2 style="font-size:20px; margin:0;">Results</h2>
           <div class="row gap-12" style="align-items:center;">
             <span id="save-error" class="muted" style="font-size:12.5px; color:var(--danger); display:none;"></span>
+            <button class="btn btn-ghost" id="share-btn">Share</button>
             <button class="btn btn-ghost" id="save-btn">Save to history</button>
           </div>
         </div>
@@ -132,7 +134,23 @@
 <script src="js/nav.js"></script>
 <script src="js/reference-data.js"></script>
 <script src="js/results-render.js"></script>
+<script src="js/share-card.js"></script>
 <script src="js/analyze.js"></script>
 <script src="js/live-overlay.js"></script>
+<script src="js/multi-face.js"></script>
+<script>
+document.getElementById('share-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('share-btn');
+  if (!lastResult) return;
+  btn.disabled = true; const old = btn.textContent; btn.textContent = 'Preparing…';
+  try {
+    let name = '';
+    try { name = (await Api.me()).user.name.split(' ')[0]; } catch (_) {}
+    const state = await shareResultCard(lastResult, document.getElementById('preview-img').src, name);
+    btn.textContent = state === 'downloaded' ? 'Image saved ✓' : old;
+  } catch (e) { btn.textContent = 'Failed'; }
+  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1800);
+});
+</script>
 </body>
 </html>

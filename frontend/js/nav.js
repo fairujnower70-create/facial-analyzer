@@ -58,7 +58,7 @@
   try {
     const { user } = await Api.me();
     actions.innerHTML = `
-      <span class="muted" style="font-size:14px;">Hi, ${user.name.split(' ')[0]}</span>
+      <a class="nav-hi" href="/account.html" title="Your account">Hi, ${user.name.split(' ')[0].replace(/[<>&"]/g, '')}</a>
       ${user.role === 'admin' ? '<a class="btn btn-ghost" href="/admin.html">Admin</a>' : ''}
       <a class="btn btn-ghost${document.querySelector('.nav-links a[href="/dashboard.html"]') ? ' nav-dup' : ''}" href="/dashboard.html">Dashboard</a>
       <button class="btn btn-primary" id="nav-logout">Log out</button>
@@ -74,9 +74,10 @@
         '/dashboard.html': '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
         '/scan.html': '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.2"/>',
         '/history.html': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        '/journal.html': '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/><circle cx="9" cy="14.5" r="1" fill="currentColor"/><circle cx="14" cy="14.5" r="1" fill="currentColor"/>',
         '/admin.html': '<path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/>'
       };
-      const items = [['/dashboard.html', 'Home'], ['/scan.html', 'Scan'], ['/history.html', 'History']];
+      const items = [['/dashboard.html', 'Home'], ['/scan.html', 'Scan'], ['/history.html', 'History'], ['/journal.html', 'Journal']];
       if (user.role === 'admin') items.push(['/admin.html', 'Admin']);
       const bar = document.createElement('nav');
       bar.className = 'tabbar';

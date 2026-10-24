@@ -26,6 +26,7 @@
      
       <a href="/scan.html">Scan</a>
       <a href="/history.html">History</a>
+      <a href="/journal.html">Journal</a>
     </div>
     <div class="nav-actions" id="nav-actions"></div>
   </div>
@@ -35,6 +36,11 @@
   <div style="max-width:640px; margin:0 auto 36px;" class="center">
     <h1 style="font-size:28px;">Your scan history</h1>
     <p>Every analysis you've chosen to save, most recent first. Click a card to reopen the full breakdown.</p>
+  </div>
+
+  <div id="compare-toolbar" class="compare-toolbar" style="display:none;">
+    <button class="btn btn-ghost" id="compare-toggle">Compare scans</button>
+    <span class="muted" id="compare-hint" style="display:none; font-size:13px;">Tap two scans to compare them</span>
   </div>
 
   <div id="loading" class="skeleton-stack"><div class="skeleton sk-title"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
@@ -51,12 +57,30 @@
   <div class="panel modal-box">
     <div class="row" style="justify-content:space-between; margin-bottom:6px;">
       <h2 id="detail-title" style="font-size:19px; margin:0;">Scan detail</h2>
-      <button class="btn btn-ghost" id="detail-close" style="padding:6px 12px;">Close</button>
+      <div class="row gap-12">
+        <button class="btn btn-ghost" id="detail-share" style="padding:6px 12px;">Share</button>
+        <button class="btn btn-ghost" id="detail-close" style="padding:6px 12px;">Close</button>
+      </div>
     </div>
     <p id="detail-date" class="muted" style="font-size:12.5px; margin-bottom:20px;"></p>
     <div id="detail-thumb-wrap" style="text-align:center; margin-bottom:18px;"></div>
     <div id="detail-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px;"></div>
     <div id="detail-expressions" style="margin-top:22px;"></div>
+  </div>
+</div>
+
+<div id="compare-bar" class="compare-bar" style="display:none;">
+  <span id="compare-count">0/2 selected</span>
+  <button class="btn btn-primary" id="compare-go" disabled>Compare</button>
+</div>
+
+<div id="compare-modal" class="modal-backdrop" style="display:none;">
+  <div class="panel modal-box" style="max-width:640px;">
+    <div class="row" style="justify-content:space-between; margin-bottom:14px;">
+      <h2 style="font-size:19px; margin:0;">Compare scans</h2>
+      <button class="btn btn-ghost" id="compare-close" style="padding:6px 12px;">Close</button>
+    </div>
+    <div id="compare-body"></div>
   </div>
 </div>
 
@@ -69,6 +93,7 @@
 <script src="js/nav.js"></script>
 <script src="js/reference-data.js"></script>
 <script src="js/results-render.js"></script>
+<script src="js/share-card.js"></script>
 <script>
 (async function () {
   try {
@@ -93,6 +118,7 @@
     }
 
     scansById = Object.fromEntries(scans.map((s) => [s.id, s]));
+    if (scans.length >= 2) document.getElementById('compare-toolbar').style.display = 'flex';
     list.innerHTML = scans.map(renderScan).join('');
 
     document.querySelectorAll('[data-delete]').forEach((btn) => {
@@ -114,6 +140,7 @@
     document.querySelectorAll('[data-open]').forEach((card) => {
       card.addEventListener('click', () => {
         if (card.dataset.swiped) return; // a swipe is not a tap
+        if (compareMode) return toggleCompare(card.getAttribute('data-open'), card);
         openDetail(scansById[card.getAttribute('data-open')]);
       });
       enableSwipeDelete(card);
@@ -184,6 +211,64 @@
       </div></div>`;
   }
 
+  // ---------- compare mode ----------
+  let compareMode = false;
+  let picked = [];
+  const toggleBtn = document.getElementById('compare-toggle');
+  const bar = document.getElementById('compare-bar');
+
+  function setCompareMode(on) {
+    compareMode = on;
+    picked = [];
+    document.body.classList.toggle('compare-on', on);
+    toggleBtn.textContent = on ? 'Cancel' : 'Compare scans';
+    document.getElementById('compare-hint').style.display = on ? 'inline' : 'none';
+    bar.style.display = on ? 'flex' : 'none';
+    document.querySelectorAll('.history-card.picked').forEach((c) => c.classList.remove('picked'));
+    updateBar();
+  }
+  function updateBar() {
+    document.getElementById('compare-count').textContent = `${picked.length}/2 selected`;
+    document.getElementById('compare-go').disabled = picked.length !== 2;
+  }
+  function toggleCompare(id, card) {
+    const i = picked.indexOf(id);
+    if (i >= 0) { picked.splice(i, 1); card.classList.remove('picked'); }
+    else {
+      if (picked.length === 2) { const old = picked.shift(); const oc = document.querySelector(`[data-open="${old}"]`); if (oc) oc.classList.remove('picked'); }
+      picked.push(id); card.classList.add('picked');
+    }
+    updateBar();
+  }
+  toggleBtn.addEventListener('click', () => setCompareMode(!compareMode));
+  document.getElementById('compare-go').addEventListener('click', () => {
+    const [a, b] = picked.map((id) => scansById[id]).sort((x, y) => new Date(x.created_at) - new Date(y.created_at));
+    const num = (v) => (v == null ? null : Math.round(v));
+    const delta = (x, y, better) => {
+      if (x == null || y == null) return '';
+      const d = Math.round(y) - Math.round(x);
+      if (!d) return '<span class="muted">same</span>';
+      const good = better === 'up' ? d > 0 : better === 'down' ? d < 0 : null;
+      return `<span style="color:${good === null ? 'var(--text-muted)' : good ? '#34d399' : '#f87171'}">${d > 0 ? '+' : ''}${d}</span>`;
+    };
+    const rows = [
+      ['Age (est.)', `~${num(a.age)}`, `~${num(b.age)}`, delta(a.age, b.age, null)],
+      ['Expression', emotionBadge(a.dominant_expression), emotionBadge(b.dominant_expression), ''],
+      ['Face shape', a.face_shape || '—', b.face_shape || '—', ''],
+      ['Symmetry', a.symmetry_score != null ? `${num(a.symmetry_score)}/100` : '—', b.symmetry_score != null ? `${num(b.symmetry_score)}/100` : '—', delta(a.symmetry_score, b.symmetry_score, 'up')]
+    ];
+    const photo = (s) => s.thumbnail ? `<img src="${s.thumbnail}" alt="" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:14px; border:1px solid var(--border);" />` : '<div class="hc-noimg" style="width:100%; height:auto; aspect-ratio:1;"></div>';
+    document.getElementById('compare-body').innerHTML = `
+      <div class="cmp-grid cmp-head">
+        <div></div>
+        <div>${photo(a)}<div class="muted cmp-date">${new Date(a.created_at).toLocaleDateString()}</div></div>
+        <div>${photo(b)}<div class="muted cmp-date">${new Date(b.created_at).toLocaleDateString()}</div></div>
+        <div class="muted cmp-d">Change</div>
+      </div>` + rows.map(([k, x, y, d]) => `<div class="cmp-grid cmp-row"><div class="muted">${k}</div><div>${x}</div><div>${y}</div><div>${d}</div></div>`).join('');
+    document.getElementById('compare-modal').style.display = 'flex';
+  });
+  document.getElementById('compare-close').addEventListener('click', () => { document.getElementById('compare-modal').style.display = 'none'; setCompareMode(false); });
+
   // ---------- detail modal ----------
   const modal = document.getElementById('detail-modal');
   document.getElementById('detail-close').addEventListener('click', closeDetail);
@@ -191,8 +276,19 @@
     if (e.target === modal) closeDetail();
   });
 
+  let openScan = null;
+  document.getElementById('detail-share').addEventListener('click', async () => {
+    if (!openScan) return;
+    const btn = document.getElementById('detail-share'); btn.disabled = true;
+    let exps = {}; try { exps = JSON.parse(openScan.expressions_json || '{}'); } catch (_) {}
+    let name = ''; try { name = (await Api.me()).user.name.split(' ')[0]; } catch (_) {}
+    try { await shareResultCard({ age: openScan.age, dominantExpression: openScan.dominant_expression, faceShape: openScan.face_shape, symmetryScore: openScan.symmetry_score, expressions: exps }, openScan.thumbnail, name); } catch (_) {}
+    btn.disabled = false;
+  });
+
   function openDetail(s) {
     if (!s) return;
+    openScan = s;
     document.getElementById('detail-title').textContent = s.label || 'Scan';
     document.getElementById('detail-date').textContent = new Date(s.created_at).toLocaleString();
 
