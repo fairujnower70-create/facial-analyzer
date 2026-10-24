@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.onrender.mien_455a.twa",
+        "sha256_cert_fingerprints": ["F4:00:A7:96:81:5B:EE:D8:5F:C9:7E:6D:52:94:89:1A:A8:CE:7F:D4:F5:3D:D3:19:08:67:90:DA:9D:37:4A:98"]
+      }
+    }]
