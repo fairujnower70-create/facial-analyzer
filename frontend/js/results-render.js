@@ -22,7 +22,7 @@ function renderAnalysisCard(gridEl, expressionsListEl, r) {
     ['Estimated age', `~<span data-count="${Math.round(r.age)}">${Math.round(r.age)}</span>`],
     ['Gender estimate', `${capWord(r.gender)} (<span data-count="${Math.round((r.genderProbability || 0) * 100)}">${Math.round((r.genderProbability || 0) * 100)}</span>%)`],
     ['Dominant expression', emotionBadge(r.dominantExpression)],
-    ['Face shape', `${r.faceShape || '—'}${r.faceShapeConfidence != null ? ` (<span data-count="${Math.round(r.faceShapeConfidence)}">${Math.round(r.faceShapeConfidence)}</span>% match)` : ''}`],
+    ['Face shape', r.faceShapeScores && r.faceShape in r.faceShapeScores ? `${r.faceShape} (<span data-count="${r.faceShapeScores[r.faceShape]}">${r.faceShapeScores[r.faceShape]}</span>%)` : `${r.faceShape || '—'}${r.faceShapeConfidence != null ? ` (<span data-count="${Math.round(r.faceShapeConfidence)}">${Math.round(r.faceShapeConfidence)}</span>% match)` : ''}`],
     ['Symmetry score', r.symmetryScore != null ? `<span data-count="${Math.round(r.symmetryScore)}">${Math.round(r.symmetryScore)}</span>/100` : '—/100']
   ];
 
@@ -63,6 +63,26 @@ function renderAnalysisCard(gridEl, expressionsListEl, r) {
         </div>`;
       })
       .join('');
+
+  // Face-shape breakdown: a percentage for every shape.
+  if (r.faceShapeScores) {
+    const shapes = Object.entries(r.faceShapeScores).sort((a, b) => b[1] - a[1]);
+    expressionsListEl.innerHTML +=
+      `<div class="muted" style="font-size:13px; margin:18px 0 10px;">Face shape breakdown</div>` +
+      shapes
+        .map(
+          ([name, pct], i) => `
+        <div style="margin-bottom:8px;">
+          <div class="row" style="justify-content:space-between; font-size:13px; margin-bottom:4px;">
+            <span${i === 0 ? ' style="font-weight:600;"' : ''}>${name}</span><span class="muted">${pct}%</span>
+          </div>
+          <div style="height:6px; border-radius:4px; background:var(--bg-input); overflow:hidden;">
+            <div class="bar-fill" data-w="${pct}" style="height:100%; width:0; background:var(--accent, #8b5cf6);"></div>
+          </div>
+        </div>`
+        )
+        .join('');
+  }
 
   animateResults(gridEl);
   animateResults(expressionsListEl);

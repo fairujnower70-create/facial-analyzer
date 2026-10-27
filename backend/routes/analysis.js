@@ -20,6 +20,7 @@ router.post(
       expressions,
       faceShape,
       faceShapeConfidence,
+      faceShapeScores,
       symmetryScore,
       landmarksCount,
       thumbnail
@@ -32,8 +33,8 @@ router.post(
     const result = await db.query(
       `INSERT INTO scans
         (user_id, label, age, gender, gender_probability, dominant_expression, expressions_json,
-         face_shape, face_shape_confidence, symmetry_score, landmarks_count, thumbnail)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         face_shape, face_shape_confidence, symmetry_score, landmarks_count, thumbnail, face_shape_scores)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [
         req.user.id,
@@ -47,7 +48,8 @@ router.post(
         faceShapeConfidence || null,
         symmetryScore || null,
         landmarksCount || null,
-        thumbnail || null
+        thumbnail || null,
+        faceShapeScores && typeof faceShapeScores === 'object' ? JSON.stringify(faceShapeScores) : null
       ]
     );
 

@@ -312,6 +312,7 @@
       expressions,
       faceShape: s.face_shape,
       faceShapeConfidence: s.face_shape_confidence,
+      faceShapeScores: (() => { try { return s.face_shape_scores ? JSON.parse(s.face_shape_scores) : null; } catch (_) { return null; } })(),
       symmetryScore: s.symmetry_score
     };
 

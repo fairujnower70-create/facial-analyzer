@@ -249,9 +249,15 @@ function drawOverlay(detection) {
 
 function computeRatioVector(landmarks) {
   const pts = landmarks.positions;
-  const jawWidth = dist(pts[0], pts[16]);
+  // Lower-jaw width (gonial points). Points 0/16 sit at ear level and are
+  // always wider than the cheekbones, which made every jaw look "wide".
+  const jawWidth = dist(pts[4], pts[12]);
   const cheekWidth = dist(pts[1], pts[15]);
-  const faceHeight = dist(pts[8], midpoint(pts[19], pts[24]));
+  // The 68 landmarks stop at the eyebrows, so chin-to-brow is only about
+  // two thirds of the real face height (hairline to chin). Measuring just that
+  // part made every face look short and wide, i.e. "Round". Scale it up by
+  // the classic facial-thirds proportion to estimate the full height.
+  const faceHeight = dist(pts[8], midpoint(pts[19], pts[24])) * 1.5;
   const foreheadWidth = dist(pts[17], pts[26]);
 
   return {
@@ -292,9 +298,14 @@ function classifyFaceShape(landmarks) {
     Math.min(1, (runnerUp.distance - best.distance) / Math.max(runnerUp.distance, 0.001))
   );
 
+  // Percentage for every shape (adds up to 100), from the same distances.
+  const distances = {};
+  scored.forEach((x) => (distances[x.shape] = x.distance));
+
   return {
     shape: best.shape,
     description: best.description,
+    scores: MienCore.shapeProbabilities(distances, 0.04),
     confidence: Math.round(confidence * 100),
     ratios: liveRatios
   };
@@ -361,6 +372,7 @@ function buildResult(detection) {
     expressions: Object.fromEntries(sorted.map(([k, v]) => [k, Math.round(v * 1000) / 1000])),
     faceShape: shapeMatch.shape,
     faceShapeConfidence: shapeMatch.confidence,
+    faceShapeScores: shapeMatch.scores,
     symmetryScore: estimateSymmetry(detection.landmarks),
     landmarksCount: positions.length
   };
