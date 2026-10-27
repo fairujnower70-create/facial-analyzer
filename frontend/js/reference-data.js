@@ -20,33 +20,23 @@
 const FACE_SHAPE_REFERENCE = [
   {
     shape: 'Oval',
-    ratios: { heightToCheekWidth: 1.42, jawToCheekWidth: 0.82, foreheadToCheekWidth: 0.86, jawToForehead: 0.95 },
+    ratios: { heightToCheekWidth: 1.42, jawToCheekWidth: 0.80, foreheadToCheekWidth: 0.84, jawToForehead: 0.95 },
     description: 'Balanced proportions; face is longer than it is wide, jaw gently tapered.'
   },
   {
     shape: 'Round',
-    ratios: { heightToCheekWidth: 1.08, jawToCheekWidth: 0.93, foreheadToCheekWidth: 0.90, jawToForehead: 1.03 },
+    ratios: { heightToCheekWidth: 1.2, jawToCheekWidth: 0.86, foreheadToCheekWidth: 0.85, jawToForehead: 1.01 },
     description: 'Face width and height are close; soft jawline with little angularity.'
   },
   {
     shape: 'Square',
-    ratios: { heightToCheekWidth: 1.15, jawToCheekWidth: 0.97, foreheadToCheekWidth: 0.95, jawToForehead: 1.02 },
+    ratios: { heightToCheekWidth: 1.28, jawToCheekWidth: 0.92, foreheadToCheekWidth: 0.88, jawToForehead: 1.04 },
     description: 'Jaw, cheekbones, and forehead are similarly wide; strong, angular jawline.'
   },
   {
     shape: 'Heart',
-    ratios: { heightToCheekWidth: 1.30, jawToCheekWidth: 0.70, foreheadToCheekWidth: 0.97, jawToForehead: 0.72 },
+    ratios: { heightToCheekWidth: 1.4, jawToCheekWidth: 0.68, foreheadToCheekWidth: 0.9, jawToForehead: 0.75 },
     description: 'Wide forehead, narrow jaw, often a pointed chin.'
-  },
-  {
-    shape: 'Long',
-    ratios: { heightToCheekWidth: 1.62, jawToCheekWidth: 0.80, foreheadToCheekWidth: 0.82, jawToForehead: 0.98 },
-    description: 'Noticeably longer than wide, with a straight cheek line.'
-  },
-  {
-    shape: 'Diamond',
-    ratios: { heightToCheekWidth: 1.35, jawToCheekWidth: 0.68, foreheadToCheekWidth: 0.75, jawToForehead: 1.10 },
-    description: 'Cheekbones are the widest point; forehead and jaw both taper in.'
   }
 ];
 
@@ -60,7 +50,12 @@ const EXPRESSION_COLORS = {
   surprised: '#f59e0b', // amber
   neutral: '#94a3b8', // slate
   fearful: '#a78bfa', // light violet
-  disgusted: '#84cc16' // lime
+  disgusted: '#84cc16', // lime
+  // derived (heuristic) moods — see vision-core.js
+  funny: '#22d3ee', // cyan
+  excited: '#e879f9', // fuchsia
+  shy: '#f9a8d4', // soft pink
+  contempt: '#14b8a6' // teal
 };
 
 // Typical population asymmetry baseline used to calibrate the symmetry

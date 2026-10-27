@@ -2,12 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Scan — Mien</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
-<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"></script>
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Mien" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<script src="/js/theme.js"></script>
 </head>
 <body>
 
@@ -15,9 +23,10 @@
   <div class="nav-inner">
     <a href="/index.html" class="brand"><span class="brand-mark"></span>Mien</a>
     <div class="nav-links">
-   
+      
       <a href="/scan.html">Scan</a>
       <a href="/history.html">History</a>
+      <a href="/journal.html">Journal</a>
     </div>
     <div class="nav-actions" id="nav-actions"></div>
   </div>
@@ -52,7 +61,13 @@
       </div>
 
       <div id="camera-panel" style="display:none; text-align:center;">
-        <video id="webcam" autoplay playsinline muted style="width:100%; max-width:420px; border-radius:var(--radius-md); border:1px solid var(--border); background:#000;"></video>
+        <div class="live-frame" id="live-frame">
+          <video id="webcam" autoplay playsinline muted></video>
+          <canvas id="live-canvas"></canvas>
+          <div class="live-scanline"></div>
+          <span class="lc lc-tl"></span><span class="lc lc-tr"></span><span class="lc lc-bl"></span><span class="lc lc-br"></span>
+          <div class="live-status" id="live-status">Starting camera…</div>
+        </div>
         <div style="margin-top:16px;">
           <button class="btn btn-primary" id="capture-btn">Capture frame</button>
         </div>
@@ -92,15 +107,16 @@
           <h2 style="font-size:20px; margin:0;">Results</h2>
           <div class="row gap-12" style="align-items:center;">
             <span id="save-error" class="muted" style="font-size:12.5px; color:var(--danger); display:none;"></span>
+            <button class="btn btn-ghost" id="share-btn">Share</button>
             <button class="btn btn-ghost" id="save-btn">Save to history</button>
           </div>
         </div>
         <div id="results-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px;"></div>
         <div id="expressions-list" style="margin-top:22px;"></div>
         <p class="field-hint" style="margin-top:20px;">
-          Age &amp; gender: model trained on IMDB-WIKI (~500k labeled faces). Expression: model trained on FER2013.
+          Age &amp; gender: model trained on IMDB-WIKI (~500k labeled faces). Expression: model trained on FER2013 (7 native emotions); funny, excited, shy and contempt are estimated from those scores plus facial geometry, so treat them as playful guesses.
           Detection &amp; landmarks: model trained on WIDER FACE / iBUG 300-W. Face shape: nearest-match against a
-          reference set of facial-ratio archetypes, shown with a match confidence rather than a hard label.
+          reference set of facial-ratio archetypes, shown as a percentage for each of Oval, Round, Square and Heart.
         </p>
       </div>
     </div>
@@ -113,10 +129,37 @@
   <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
 </footer>
 
+<script src="js/offline-queue.js"></script>
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/reference-data.js"></script>
+<script src="/vendor/face-api.js"></script>
+<script>
+  // Local copy first (works offline); CDN only if the local file is missing.
+  if (typeof faceapi === 'undefined') {
+    document.write('<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"><\/script>');
+  }
+</script>
+<script src="js/telemetry.js"></script>
+<script src="js/vision-core.js"></script>
 <script src="js/results-render.js"></script>
+<script src="js/share-card.js"></script>
 <script src="js/analyze.js"></script>
+<script src="js/live-overlay.js"></script>
+<script src="js/multi-face.js"></script>
+<script>
+document.getElementById('share-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('share-btn');
+  if (!lastResult) return;
+  btn.disabled = true; const old = btn.textContent; btn.textContent = 'Preparing…';
+  try {
+    let name = '';
+    try { name = (await Api.me()).user.name.split(' ')[0]; } catch (_) {}
+    const state = await shareResultCard(lastResult, document.getElementById('preview-img').src, name);
+    btn.textContent = state === 'downloaded' ? 'Image saved ✓' : old;
+  } catch (e) { btn.textContent = 'Failed'; }
+  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1800);
+});
+</script>
 </body>
 </html>

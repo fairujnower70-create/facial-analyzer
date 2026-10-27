@@ -2,11 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>History — Mien</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Mien" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<script src="/js/theme.js"></script>
 </head>
 <body>
 
@@ -14,9 +23,10 @@
   <div class="nav-inner">
     <a href="/index.html" class="brand"><span class="brand-mark"></span>Mien</a>
     <div class="nav-links">
-      
+     
       <a href="/scan.html">Scan</a>
       <a href="/history.html">History</a>
+      <a href="/journal.html">Journal</a>
     </div>
     <div class="nav-actions" id="nav-actions"></div>
   </div>
@@ -28,7 +38,12 @@
     <p>Every analysis you've chosen to save, most recent first. Click a card to reopen the full breakdown.</p>
   </div>
 
-  <div id="loading" class="loader-stack"><div class="neon-ring-loader"></div></div>
+  <div id="compare-toolbar" class="compare-toolbar" style="display:none;">
+    <button class="btn btn-ghost" id="compare-toggle">Compare scans</button>
+    <span class="muted" id="compare-hint" style="display:none; font-size:13px;">Tap two scans to compare them</span>
+  </div>
+
+  <div id="loading" class="skeleton-stack"><div class="skeleton sk-title"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
   <div id="empty" class="panel center" style="display:none; max-width:520px; margin:0 auto; padding:44px 24px;">
     <p style="margin-bottom:18px;">No saved scans yet.</p>
     <a href="/scan.html" class="btn btn-primary">Run your first scan</a>
@@ -42,12 +57,30 @@
   <div class="panel modal-box">
     <div class="row" style="justify-content:space-between; margin-bottom:6px;">
       <h2 id="detail-title" style="font-size:19px; margin:0;">Scan detail</h2>
-      <button class="btn btn-ghost" id="detail-close" style="padding:6px 12px;">Close</button>
+      <div class="row gap-12">
+        <button class="btn btn-ghost" id="detail-share" style="padding:6px 12px;">Share</button>
+        <button class="btn btn-ghost" id="detail-close" style="padding:6px 12px;">Close</button>
+      </div>
     </div>
     <p id="detail-date" class="muted" style="font-size:12.5px; margin-bottom:20px;"></p>
     <div id="detail-thumb-wrap" style="text-align:center; margin-bottom:18px;"></div>
     <div id="detail-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px;"></div>
     <div id="detail-expressions" style="margin-top:22px;"></div>
+  </div>
+</div>
+
+<div id="compare-bar" class="compare-bar" style="display:none;">
+  <span id="compare-count">0/2 selected</span>
+  <button class="btn btn-primary" id="compare-go" disabled>Compare</button>
+</div>
+
+<div id="compare-modal" class="modal-backdrop" style="display:none;">
+  <div class="panel modal-box" style="max-width:640px;">
+    <div class="row" style="justify-content:space-between; margin-bottom:14px;">
+      <h2 style="font-size:19px; margin:0;">Compare scans</h2>
+      <button class="btn btn-ghost" id="compare-close" style="padding:6px 12px;">Close</button>
+    </div>
+    <div id="compare-body"></div>
   </div>
 </div>
 
@@ -60,6 +93,7 @@
 <script src="js/nav.js"></script>
 <script src="js/reference-data.js"></script>
 <script src="js/results-render.js"></script>
+<script src="js/share-card.js"></script>
 <script>
 (async function () {
   try {
@@ -84,6 +118,7 @@
     }
 
     scansById = Object.fromEntries(scans.map((s) => [s.id, s]));
+    if (scans.length >= 2) document.getElementById('compare-toolbar').style.display = 'flex';
     list.innerHTML = scans.map(renderScan).join('');
 
     document.querySelectorAll('[data-delete]').forEach((btn) => {
@@ -93,7 +128,7 @@
         btn.disabled = true;
         try {
           await Api.deleteScan(id);
-          document.getElementById(`scan-${id}`).remove();
+          document.getElementById(`scan-${id}`).closest('.hc-wrap').remove();
           delete scansById[id];
         } catch (err) {
           alert(err.message);
@@ -103,31 +138,136 @@
     });
 
     document.querySelectorAll('[data-open]').forEach((card) => {
-      card.addEventListener('click', () => openDetail(scansById[card.getAttribute('data-open')]));
+      card.addEventListener('click', () => {
+        if (card.dataset.swiped) return; // a swipe is not a tap
+        if (compareMode) return toggleCompare(card.getAttribute('data-open'), card);
+        openDetail(scansById[card.getAttribute('data-open')]);
+      });
+      enableSwipeDelete(card);
     });
   } catch (err) {
     loading.innerHTML = `<p class="muted">Could not load history: ${err.message}</p>`;
   }
 
+  // Swipe a card left (touch screens) to delete it.
+  function enableSwipeDelete(card) {
+    let x0 = 0, y0 = 0, dx = 0, tracking = false, horizontal = null;
+    const THRESHOLD = 90;
+    card.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      x0 = t.clientX; y0 = t.clientY; dx = 0; tracking = true; horizontal = null;
+      card.style.transition = 'none';
+    }, { passive: true });
+    card.addEventListener('touchmove', (e) => {
+      if (!tracking) return;
+      const t = e.touches[0];
+      const mx = t.clientX - x0, my = t.clientY - y0;
+      if (horizontal === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) horizontal = Math.abs(mx) > Math.abs(my);
+      if (!horizontal) return;
+      dx = Math.min(0, mx);
+      card.style.transform = `translateX(${dx}px)`;
+      card.parentElement.classList.toggle('armed', dx < -THRESHOLD);
+    }, { passive: true });
+    card.addEventListener('touchend', () => {
+      if (!tracking) return;
+      tracking = false;
+      card.style.transition = 'transform 0.25s ease';
+      if (horizontal && dx < -THRESHOLD) {
+        card.dataset.swiped = '1';
+        setTimeout(() => delete card.dataset.swiped, 400);
+        card.style.transform = 'translateX(-30px)';
+        if (confirm('Delete this scan?')) {
+          card.querySelector('[data-delete]').click();
+        } else {
+          card.style.transform = '';
+        }
+      } else {
+        if (horizontal) {
+          card.dataset.swiped = '1';
+          setTimeout(() => delete card.dataset.swiped, 400);
+        }
+        card.style.transform = '';
+      }
+      card.parentElement.classList.remove('armed');
+    });
+  }
+
   function renderScan(s) {
     const date = new Date(s.created_at).toLocaleString();
     return `
-      <div class="card history-card row" id="scan-${s.id}" data-open="${s.id}" style="justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
-        <div class="row gap-16" style="align-items:center;">
-          ${s.thumbnail ? `<img src="${s.thumbnail}" style="width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid var(--border);" />` : ''}
-          <div>
-            <div style="font-family:var(--font-display); font-size:15px;">${s.label || 'Scan'}</div>
-            <div class="muted" style="font-size:12.5px;">${date}</div>
+      <div class="hc-wrap"><div class="hc-swipe-bg">Delete</div>
+      <div class="card history-card" id="scan-${s.id}" data-open="${s.id}">
+        <div class="hc-thumb">${s.thumbnail ? `<img src="${s.thumbnail}" alt="" />` : '<span class="hc-noimg"></span>'}</div>
+        <div class="hc-main">
+          <div class="hc-title">${s.label || 'Scan'}</div>
+          <div class="muted hc-date">${date}</div>
+          <div class="hc-meta">
+            ${emotionBadge(s.dominant_expression)}
+            <span class="muted">Age ~${Math.round(s.age)}</span>
+            <span class="muted">${s.face_shape || '—'}</span>
           </div>
         </div>
-        <div class="row gap-12" style="flex-wrap:wrap; align-items:center;">
-          ${emotionBadge(s.dominant_expression)}
-          <span class="muted" style="font-size:13.5px;">Age ~${Math.round(s.age)}</span>
-          <span class="muted" style="font-size:13.5px;">${s.face_shape || '—'}</span>
-        </div>
-        <button class="btn btn-danger-ghost" data-delete="${s.id}">Delete</button>
-      </div>`;
+        <button class="btn btn-danger-ghost hc-del" data-delete="${s.id}" aria-label="Delete scan">Delete</button>
+      </div></div>`;
   }
+
+  // ---------- compare mode ----------
+  let compareMode = false;
+  let picked = [];
+  const toggleBtn = document.getElementById('compare-toggle');
+  const bar = document.getElementById('compare-bar');
+
+  function setCompareMode(on) {
+    compareMode = on;
+    picked = [];
+    document.body.classList.toggle('compare-on', on);
+    toggleBtn.textContent = on ? 'Cancel' : 'Compare scans';
+    document.getElementById('compare-hint').style.display = on ? 'inline' : 'none';
+    bar.style.display = on ? 'flex' : 'none';
+    document.querySelectorAll('.history-card.picked').forEach((c) => c.classList.remove('picked'));
+    updateBar();
+  }
+  function updateBar() {
+    document.getElementById('compare-count').textContent = `${picked.length}/2 selected`;
+    document.getElementById('compare-go').disabled = picked.length !== 2;
+  }
+  function toggleCompare(id, card) {
+    const i = picked.indexOf(id);
+    if (i >= 0) { picked.splice(i, 1); card.classList.remove('picked'); }
+    else {
+      if (picked.length === 2) { const old = picked.shift(); const oc = document.querySelector(`[data-open="${old}"]`); if (oc) oc.classList.remove('picked'); }
+      picked.push(id); card.classList.add('picked');
+    }
+    updateBar();
+  }
+  toggleBtn.addEventListener('click', () => setCompareMode(!compareMode));
+  document.getElementById('compare-go').addEventListener('click', () => {
+    const [a, b] = picked.map((id) => scansById[id]).sort((x, y) => new Date(x.created_at) - new Date(y.created_at));
+    const num = (v) => (v == null ? null : Math.round(v));
+    const delta = (x, y, better) => {
+      if (x == null || y == null) return '';
+      const d = Math.round(y) - Math.round(x);
+      if (!d) return '<span class="muted">same</span>';
+      const good = better === 'up' ? d > 0 : better === 'down' ? d < 0 : null;
+      return `<span style="color:${good === null ? 'var(--text-muted)' : good ? '#34d399' : '#f87171'}">${d > 0 ? '+' : ''}${d}</span>`;
+    };
+    const rows = [
+      ['Age (est.)', `~${num(a.age)}`, `~${num(b.age)}`, delta(a.age, b.age, null)],
+      ['Expression', emotionBadge(a.dominant_expression), emotionBadge(b.dominant_expression), ''],
+      ['Face shape', a.face_shape || '—', b.face_shape || '—', ''],
+      ['Symmetry', a.symmetry_score != null ? `${num(a.symmetry_score)}/100` : '—', b.symmetry_score != null ? `${num(b.symmetry_score)}/100` : '—', delta(a.symmetry_score, b.symmetry_score, 'up')]
+    ];
+    const photo = (s) => s.thumbnail ? `<img src="${s.thumbnail}" alt="" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:14px; border:1px solid var(--border);" />` : '<div class="hc-noimg" style="width:100%; height:auto; aspect-ratio:1;"></div>';
+    document.getElementById('compare-body').innerHTML = `
+      <div class="cmp-grid cmp-head">
+        <div></div>
+        <div>${photo(a)}<div class="muted cmp-date">${new Date(a.created_at).toLocaleDateString()}</div></div>
+        <div>${photo(b)}<div class="muted cmp-date">${new Date(b.created_at).toLocaleDateString()}</div></div>
+        <div class="muted cmp-d">Change</div>
+      </div>` + rows.map(([k, x, y, d]) => `<div class="cmp-grid cmp-row"><div class="muted">${k}</div><div>${x}</div><div>${y}</div><div>${d}</div></div>`).join('');
+    document.getElementById('compare-modal').style.display = 'flex';
+  });
+  document.getElementById('compare-close').addEventListener('click', () => { document.getElementById('compare-modal').style.display = 'none'; setCompareMode(false); });
 
   // ---------- detail modal ----------
   const modal = document.getElementById('detail-modal');
@@ -136,8 +276,19 @@
     if (e.target === modal) closeDetail();
   });
 
+  let openScan = null;
+  document.getElementById('detail-share').addEventListener('click', async () => {
+    if (!openScan) return;
+    const btn = document.getElementById('detail-share'); btn.disabled = true;
+    let exps = {}; try { exps = JSON.parse(openScan.expressions_json || '{}'); } catch (_) {}
+    let name = ''; try { name = (await Api.me()).user.name.split(' ')[0]; } catch (_) {}
+    try { await shareResultCard({ age: openScan.age, dominantExpression: openScan.dominant_expression, faceShape: openScan.face_shape, symmetryScore: openScan.symmetry_score, expressions: exps }, openScan.thumbnail, name); } catch (_) {}
+    btn.disabled = false;
+  });
+
   function openDetail(s) {
     if (!s) return;
+    openScan = s;
     document.getElementById('detail-title').textContent = s.label || 'Scan';
     document.getElementById('detail-date').textContent = new Date(s.created_at).toLocaleString();
 
@@ -161,6 +312,7 @@
       expressions,
       faceShape: s.face_shape,
       faceShapeConfidence: s.face_shape_confidence,
+      faceShapeScores: (() => { try { return s.face_shape_scores ? JSON.parse(s.face_shape_scores) : null; } catch (_) { return null; } })(),
       symmetryScore: s.symmetry_score
     };
 

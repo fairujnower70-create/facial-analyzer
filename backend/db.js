@@ -84,6 +84,13 @@ async function init() {
       handled_at TIMESTAMPTZ
     )
   `);
+  // The person who asked gets a 6-digit request code. Later they can come back
+  // with it to collect the temporary password the admin prepared for them.
+  await pool.query('ALTER TABLE reset_requests ADD COLUMN IF NOT EXISTS pin_hash TEXT');
+  await pool.query('ALTER TABLE reset_requests ADD COLUMN IF NOT EXISTS pin_attempts INTEGER NOT NULL DEFAULT 0');
+  await pool.query('ALTER TABLE reset_requests ADD COLUMN IF NOT EXISTS delivered_password TEXT');
+  await pool.query('ALTER TABLE reset_requests ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ');
+  await pool.query('ALTER TABLE reset_requests ADD COLUMN IF NOT EXISTS collected_at TIMESTAMPTZ');
 
   // Admin rules:
   //  - If ADMIN_EMAIL is set, only that email is an admin (recommended for a

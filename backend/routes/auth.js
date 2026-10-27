@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -121,17 +122,64 @@ router.post(
       // a successful request (the admin would never see it).
       return res.status(404).json({ error: 'No account found with that email. Check the spelling or sign up.' });
     }
-    if (found.rowCount > 0) {
-      const userId = found.rows[0].id;
-      const pending = await db.query(
-        'SELECT 1 FROM reset_requests WHERE user_id = $1 AND handled_at IS NULL',
-        [userId]
-      );
-      if (pending.rowCount === 0) {
-        await db.query('INSERT INTO reset_requests (user_id) VALUES ($1)', [userId]);
-      }
+    const userId = found.rows[0].id;
+    // A fresh request code every time (replaces the one on a still-pending request).
+    const pin = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    const pending = await db.query(
+      'SELECT id FROM reset_requests WHERE user_id = $1 AND handled_at IS NULL',
+      [userId]
+    );
+    if (pending.rowCount === 0) {
+      await db.query('INSERT INTO reset_requests (user_id, pin_hash) VALUES ($1, $2)', [userId, hashPin(pin)]);
+    } else {
+      await db.query('UPDATE reset_requests SET pin_hash = $1, pin_attempts = 0 WHERE id = $2', [hashPin(pin), pending.rows[0].id]);
     }
-    res.json({ ok: true });
+    res.json({ ok: true, pin });
+  })
+);
+
+function hashPin(pin) {
+  return crypto.createHmac('sha256', JWT_SECRET).update(String(pin)).digest('hex');
+}
+
+// "Check my request": the user enters their email + request code. While the
+// admin has not answered it says pending; once the admin has prepared a
+// temporary password it is shown ONCE and then removed from the server.
+router.post(
+  '/reset-status',
+  asyncHandler(async (req, res) => {
+    if (tooManyForgots(req.ip)) {
+      return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+    }
+    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+    const pin = String((req.body && req.body.pin) || '').trim();
+    if (!isValidEmail(email) || !/^\d{6}$/.test(pin)) {
+      return res.status(400).json({ error: 'Enter your email and the 6-digit request code.' });
+    }
+    const r = await db.query(
+      `SELECT r.* FROM reset_requests r JOIN users u ON u.id = r.user_id
+       WHERE lower(u.email) = $1 ORDER BY r.created_at DESC LIMIT 1`,
+      [email]
+    );
+    const row = r.rows[0];
+    if (!row || !row.pin_hash || row.pin_attempts >= 10) {
+      return res.status(404).json({ error: 'Request not found. Check the email and code.' });
+    }
+    if (hashPin(pin) !== row.pin_hash) {
+      await db.query('UPDATE reset_requests SET pin_attempts = pin_attempts + 1 WHERE id = $1', [row.id]);
+      return res.status(404).json({ error: 'Request not found. Check the email and code.' });
+    }
+    if (!row.handled_at) return res.json({ status: 'pending' });
+
+    const fresh = row.delivered_at && Date.now() - new Date(row.delivered_at).getTime() < 24 * 3600 * 1000;
+    if (row.delivered_password && fresh) {
+      await db.query(
+        'UPDATE reset_requests SET delivered_password = NULL, collected_at = now() WHERE id = $1',
+        [row.id]
+      );
+      return res.json({ status: 'ready', temporaryPassword: row.delivered_password });
+    }
+    res.json({ status: row.collected_at ? 'collected' : 'handled' });
   })
 );
 

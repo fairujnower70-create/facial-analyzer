@@ -504,7 +504,13 @@
     const contempt = smirk * clamp01(0.4 + neutral + g('disgusted') + g('angry') + 0.6 * happy - surprised);
 
     const r3 = (v) => Math.round(clamp01(v) * 1000) / 1000;
-    return { funny: r3(funny), excited: r3(excited), shy: r3(shy), contempt: r3(contempt) };
+    const out = { funny: r3(funny), excited: r3(excited), shy: r3(shy), contempt: r3(contempt) };
+    // raw measurements, only shown in dev mode (?dev=1) to help tune thresholds
+    Object.defineProperty(out, '_features', {
+      enumerable: false,
+      value: { mouthOpen: +mouthOpen.toFixed(3), eyeOpen: +EAR.toFixed(3), browRaise: +browRaise.toFixed(3), lipAsym: +asym.toFixed(3), tiltDeg: +tilt.toFixed(1), pitchDown: +pitchDown.toFixed(1), yaw: +turn.toFixed(1), happy: +happy.toFixed(2), neutral: +neutral.toFixed(2) }
+    });
+    return out;
   }
 
   // The 7 native probabilities stay exactly as the model produced them. A

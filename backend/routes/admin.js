@@ -100,18 +100,38 @@ router.post(
     if (!Number.isInteger(targetId)) {
       return res.status(404).json({ error: 'User not found' });
     }
+    // The admin may type a password of their own; otherwise one is generated.
+    const custom = req.body && typeof req.body.password === 'string' ? req.body.password.trim() : '';
+    if (custom && custom.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
     const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const bytes = crypto.randomBytes(10);
     let temp = '';
     for (const b of bytes) temp += alphabet[b % alphabet.length];
+    if (custom) temp = custom;
 
     const hash = await bcrypt.hash(temp, 10);
     const result = await db.query('UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING name, email', [hash, targetId]);
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
+    // Hand the password to the user inside the app: it is kept for 24 h on the
+    // user's request and shown once when they check their request code.
+    const upd = await db.query(
+      `UPDATE reset_requests SET handled_at = COALESCE(handled_at, now()), delivered_password = $2, delivered_at = now(), collected_at = NULL
+       WHERE id = (SELECT id FROM reset_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1)
+       RETURNING id`,
+      [targetId, temp]
+    );
     await db.query('UPDATE reset_requests SET handled_at = now() WHERE user_id = $1 AND handled_at IS NULL', [targetId]);
-    res.json({ ok: true, temporaryPassword: temp, name: result.rows[0].name, email: result.rows[0].email });
+    res.json({
+      ok: true,
+      temporaryPassword: temp,
+      name: result.rows[0].name,
+      email: result.rows[0].email,
+      deliveredInApp: upd.rowCount > 0
+    });
   })
 );
 

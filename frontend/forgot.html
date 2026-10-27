@@ -30,18 +30,46 @@
 <div class="auth-shell">
   <div class="panel auth-card">
     <h1>Forgot password?</h1>
-    <p style="margin-bottom:22px;">Enter your account email. Your request goes to the Mien admin, who will give you a temporary password. You can change it afterwards in <b>Account</b>.</p>
 
-    <div class="form-error" id="form-error"></div>
-    <div class="form-success" id="form-success" style="display:none;"></div>
+    <div id="step-request">
+      <p style="margin-bottom:22px;">Enter your account email. Your request goes to the Mien admin, who will prepare a temporary password for you. You get a <b>request code</b> to collect it here later.</p>
+      <div class="form-error" id="form-error"></div>
+      <form id="forgot-form">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" autocomplete="email" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="submit-btn"><span id="submit-label">Send request</span></button>
+      </form>
+      <div class="auth-switch" style="margin-top:14px;">Already sent a request? <a href="#" id="to-check">Check its status</a></div>
+    </div>
 
-    <form id="forgot-form">
-      <div class="field">
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" autocomplete="email" required />
+    <div id="step-sent" style="display:none;">
+      <p style="margin-bottom:14px;">Request sent to the admin. <b>Save this request code</b> — you need it to collect your temporary password:</p>
+      <div id="pin-box" style="font-family:monospace; font-size:34px; letter-spacing:8px; text-align:center; padding:16px; border-radius:12px; background:var(--bg-input); user-select:all;"></div>
+      <p class="field-hint" style="margin:12px 0 18px;">Come back to this page later (or use the button below) and enter your email + this code. When the admin has answered, your temporary password appears here.</p>
+      <button class="btn btn-primary btn-block" id="go-check">Check status now</button>
+    </div>
+
+    <div id="step-check" style="display:none;">
+      <p style="margin-bottom:18px;">Enter your email and the 6-digit request code you were given.</p>
+      <div class="form-error" id="check-error"></div>
+      <div class="form-success" id="check-info" style="display:none;"></div>
+      <form id="check-form">
+        <div class="field"><label for="c-email">Email</label><input type="email" id="c-email" autocomplete="email" required /></div>
+        <div class="field"><label for="c-pin">Request code</label><input type="text" id="c-pin" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" required /></div>
+        <button type="submit" class="btn btn-primary btn-block" id="check-btn">Check status</button>
+      </form>
+      <div id="ready-box" style="display:none; text-align:center;">
+        <p>The admin has prepared your temporary password. It is shown <b>only once</b>:</p>
+        <div id="ready-pw" style="font-family:monospace; font-size:26px; letter-spacing:2px; padding:16px; margin:14px 0; border-radius:12px; background:var(--bg-input); user-select:all; overflow-wrap:anywhere;"></div>
+        <div class="row gap-12" style="justify-content:center;">
+          <button class="btn btn-ghost" id="ready-copy">Copy</button>
+          <a class="btn btn-primary" href="/login.html">Log in</a>
+        </div>
+        <p class="field-hint" style="margin-top:12px;">After logging in, change it in <b>Account</b>.</p>
       </div>
-      <button type="submit" class="btn btn-primary btn-block" id="submit-btn"><span id="submit-label">Send request</span></button>
-    </form>
+    </div>
 
     <div class="auth-switch">Remembered it? <a href="/login.html">Back to log in</a></div>
   </div>
@@ -50,27 +78,72 @@
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
 <script>
-  const form = document.getElementById('forgot-form');
-  const errorBox = document.getElementById('form-error');
-  const okBox = document.getElementById('form-success');
-  const btn = document.getElementById('submit-btn');
-  const label = document.getElementById('submit-label');
-  form.addEventListener('submit', async (e) => {
+  const $ = (id) => document.getElementById(id);
+  const show = (step) => ['step-request', 'step-sent', 'step-check'].forEach((s) => ($(s).style.display = s === step ? 'block' : 'none'));
+  const saved = (() => { try { return JSON.parse(localStorage.getItem('mien.resetReq') || 'null'); } catch (_) { return null; } })();
+
+  $('forgot-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    errorBox.classList.remove('visible');
-    btn.disabled = true;
-    label.innerHTML = '<span class="neon-ring-loader sm"></span>';
+    const err = $('form-error');
+    err.classList.remove('visible');
+    $('submit-btn').disabled = true;
+    $('submit-label').innerHTML = '<span class="neon-ring-loader sm"></span>';
     try {
-      await Api.forgot(form.email.value.trim());
-      okBox.textContent = 'Request sent. If that email has an account, the admin will see your request and can give you a temporary password.';
-      okBox.style.display = 'block';
-      form.style.display = 'none';
-    } catch (err) {
-      errorBox.textContent = err.message;
-      errorBox.classList.add('visible');
-      btn.disabled = false;
-      label.textContent = 'Send request';
+      const email = $('email').value.trim();
+      const res = await Api.forgot(email);
+      try { localStorage.setItem('mien.resetReq', JSON.stringify({ email, pin: res.pin })); } catch (_) {}
+      $('pin-box').textContent = res.pin;
+      show('step-sent');
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.classList.add('visible');
+      $('submit-btn').disabled = false;
+      $('submit-label').textContent = 'Send request';
     }
+  });
+
+  function openCheck() {
+    if (saved) { $('c-email').value = saved.email || ''; $('c-pin').value = saved.pin || ''; }
+    show('step-check');
+  }
+  $('to-check').addEventListener('click', (e) => { e.preventDefault(); openCheck(); });
+  $('go-check').addEventListener('click', () => {
+    let s = null; try { s = JSON.parse(localStorage.getItem('mien.resetReq') || 'null'); } catch (_) {}
+    if (s) { $('c-email').value = s.email; $('c-pin').value = s.pin; }
+    show('step-check');
+  });
+
+  $('check-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = $('check-error'), info = $('check-info');
+    err.classList.remove('visible');
+    info.style.display = 'none';
+    $('check-btn').disabled = true;
+    try {
+      const r = await Api.resetStatus($('c-email').value.trim(), $('c-pin').value.trim());
+      if (r.status === 'ready') {
+        $('check-form').style.display = 'none';
+        $('ready-pw').textContent = r.temporaryPassword;
+        $('ready-box').style.display = 'block';
+        try { localStorage.removeItem('mien.resetReq'); } catch (_) {}
+      } else if (r.status === 'pending') {
+        info.textContent = 'Not answered yet. The admin has your request — check again in a little while.';
+        info.style.display = 'block';
+      } else {
+        info.textContent = r.status === 'collected'
+          ? 'This password was already collected. If you lost it, send a new request.'
+          : 'The admin handled your request but did not leave a password here. Ask them directly, or send a new request.';
+        info.style.display = 'block';
+      }
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.classList.add('visible');
+    }
+    $('check-btn').disabled = false;
+  });
+  $('ready-copy').addEventListener('click', () => {
+    if (navigator.clipboard) navigator.clipboard.writeText($('ready-pw').textContent).catch(() => {});
+    $('ready-copy').textContent = 'Copied ✓';
   });
 </script>
 
