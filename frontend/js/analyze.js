@@ -1,8 +1,7 @@
 // Dashboard logic: auth guard, capture (upload or webcam), run face-api.js
 // analysis fully client-side, render results, optionally save to backend.
 
-// Models load from /models (cached by the service worker, so scanning works
-// offline). vision-core.js falls back to the CDN if they are not found.
+const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model';
 
 const els = {
   tabUpload: document.getElementById('tab-upload'),
@@ -33,15 +32,13 @@ const els = {
 let modelsLoaded = false;
 let webcamStream = null;
 let lastResult = null; // structured result for saving
-let scanSource = 'upload';
 
 // ---------- auth guard ----------
 (async function guard() {
   try {
     await Api.me();
-  } catch (err) {
-    // Only a real "not signed in" answer goes to login; being offline must not.
-    if (err && err.status === 401) window.location.href = '/login.html?next=scan';
+  } catch (_) {
+    window.location.href = '/login.html?next=scan';
   }
 })();
 
@@ -118,16 +115,12 @@ function loadImageFile(file) {
     return;
   }
   const reader = new FileReader();
-  reader.onload = () => {
-    scanSource = 'upload';
-    showPreview(reader.result);
-  };
+  reader.onload = () => showPreview(reader.result);
   reader.onerror = () => showError('Could not read that file — please try another image.');
   reader.readAsDataURL(file);
 }
 
 els.captureBtn.addEventListener('click', () => {
-  scanSource = 'camera';
   const canvas = document.createElement('canvas');
   canvas.width = els.webcam.videoWidth;
   canvas.height = els.webcam.videoHeight;
@@ -150,7 +143,6 @@ els.resetBtn.addEventListener('click', () => {
   const ctx = els.overlayCanvas.getContext('2d');
   ctx.clearRect(0, 0, els.overlayCanvas.width, els.overlayCanvas.height);
   clearError();
-  if (typeof setMood === 'function') setMood(null);
 });
 
 function resetResultsPanel() {
@@ -163,28 +155,19 @@ async function ensureModels() {
   if (modelsLoaded) return;
   els.loadingArea.style.display = 'flex';
   els.loadingLabel.textContent = 'Loading analysis models…';
-  const initStart = performance.now();
   // SsdMobilenetv1 (trained on the WIDER FACE dataset) gives a materially
   // more accurate face box and landmark alignment than the tiny/fast
   // detector, which matters because every downstream ratio (face shape,
   // symmetry) is computed from those landmark positions — a noisier box in
   // means noisier ratios out. It's slower, which is fine for a one-shot
   // analysis rather than a live video overlay.
-  await MienCore.loadNets([
-    faceapi.nets.ssdMobilenetv1,
-    faceapi.nets.faceLandmark68Net, // trained on iBUG 300-W / 300VW
-    faceapi.nets.faceExpressionNet, // trained on FER2013
-    faceapi.nets.ageGenderNet // trained on IMDB-WIKI (~500k labeled faces)
+  await Promise.all([
+    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL), // trained on iBUG 300-W / 300VW
+    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL), // trained on FER2013
+    faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL) // trained on IMDB-WIKI (~500k labeled faces)
   ]);
   modelsLoaded = true;
-  MienTelemetry.noteModelInit(performance.now() - initStart, MienCore.getModelSource());
-  // Make sure the service worker has these files in its offline cache.
-  try {
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      const urls = performance.getEntriesByType('resource').map((e) => e.name).filter((u) => /\/(models|vendor)\//.test(u));
-      if (urls.length) navigator.serviceWorker.controller.postMessage({ type: 'cache-urls', urls });
-    }
-  } catch (_) {}
 }
 
 // ---------- analysis ----------
@@ -194,39 +177,27 @@ async function runAnalysis() {
   clearError();
   els.previewArea.style.display = 'none';
   els.loadingArea.style.display = 'flex';
-  const t0 = performance.now();
 
   try {
     await ensureModels();
     els.loadingLabel.textContent = 'Analyzing face…';
 
-    const tInfer = performance.now();
     const detection = await faceapi
       .detectSingleFace(els.previewImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
       .withFaceLandmarks()
       .withFaceExpressions()
       .withAgeAndGender();
-    const inferenceMs = performance.now() - tInfer;
 
     els.loadingArea.style.display = 'none';
     els.previewArea.style.display = 'block';
 
     if (!detection) {
-      MienTelemetry.record({ source: scanSource, faces: 0, inferenceMs, totalMs: performance.now() - t0, error: 'NO_FACE' });
       showError('No face was clearly detected. Try a well-lit, front-facing photo.');
       return;
     }
 
     drawOverlay(detection);
     lastResult = buildResult(detection);
-    MienTelemetry.record({
-      source: scanSource,
-      faces: 1,
-      inferenceMs,
-      totalMs: performance.now() - t0,
-      pose: MienCore.estimatePose(detection.landmarks.positions),
-      dominant: lastResult.dominantExpression
-    });
     renderResults(lastResult);
   } catch (err) {
     els.loadingArea.style.display = 'none';
@@ -277,15 +248,9 @@ function drawOverlay(detection) {
 
 function computeRatioVector(landmarks) {
   const pts = landmarks.positions;
-  // Lower-jaw width (gonial points). Points 0/16 sit at ear level and are
-  // always wider than the cheekbones, which made every jaw look "wide".
-  const jawWidth = dist(pts[4], pts[12]);
+  const jawWidth = dist(pts[0], pts[16]);
   const cheekWidth = dist(pts[1], pts[15]);
-  // The 68 landmarks stop at the eyebrows, so chin-to-brow is only about
-  // two thirds of the real face height (hairline to chin). Measuring just that
-  // part made every face look short and wide, i.e. "Round". Scale it up by
-  // the classic facial-thirds proportion to estimate the full height.
-  const faceHeight = dist(pts[8], midpoint(pts[19], pts[24])) * 1.5;
+  const faceHeight = dist(pts[8], midpoint(pts[19], pts[24]));
   const foreheadWidth = dist(pts[17], pts[26]);
 
   return {
@@ -326,14 +291,9 @@ function classifyFaceShape(landmarks) {
     Math.min(1, (runnerUp.distance - best.distance) / Math.max(runnerUp.distance, 0.001))
   );
 
-  // Percentage for every shape (adds up to 100), from the same distances.
-  const distances = {};
-  scored.forEach((x) => (distances[x.shape] = x.distance));
-
   return {
     shape: best.shape,
     description: best.description,
-    scores: MienCore.shapeProbabilities(distances, 0.04),
     confidence: Math.round(confidence * 100),
     ratios: liveRatios
   };
@@ -375,21 +335,9 @@ function midpoint(a, b) {
 }
 
 function buildResult(detection) {
-  const native = detection.expressions;
-  const positions = detection.landmarks.positions;
-  // face-api's expression net only outputs 7 classes. funny / excited / shy /
-  // contempt are derived from those scores plus landmark geometry
-  // (vision-core.js) — playful estimates, not model outputs. The 7 native
-  // scores are passed through untouched.
-  let extra = null;
-  try {
-    extra = MienCore.deriveExtraExpressions(native, positions, MienCore.estimatePose(positions));
-  } catch (_) {
-    extra = null;
-  }
-  const all = Object.assign({}, native, extra || {});
-  const sorted = Object.entries(all).sort((a, b) => b[1] - a[1]);
-  const dominant = MienCore.pickDominant(native, extra);
+  const expressions = detection.expressions;
+  const sorted = Object.entries(expressions).sort((a, b) => b[1] - a[1]);
+  const dominant = sorted[0][0];
   const shapeMatch = classifyFaceShape(detection.landmarks);
 
   return {
@@ -400,11 +348,8 @@ function buildResult(detection) {
     expressions: Object.fromEntries(sorted.map(([k, v]) => [k, Math.round(v * 1000) / 1000])),
     faceShape: shapeMatch.shape,
     faceShapeConfidence: shapeMatch.confidence,
-    faceShapeScores: shapeMatch.scores,
     symmetryScore: estimateSymmetry(detection.landmarks),
-    landmarksCount: positions.length,
-    clientId: OfflineQueue.uuid(),
-    capturedAt: new Date().toISOString()
+    landmarksCount: detection.landmarks.positions.length
   };
 }
 
@@ -420,64 +365,18 @@ function renderResults(r) {
 }
 
 // ---------- save ----------
-
-// Shrinks the preview photo to a small JPEG so it is always small enough to
-// store. (A raw webcam capture is a multi-megabyte PNG; it used to be larger
-// than the size limit and was silently dropped, so camera scans were saved
-// without their picture.) The analysis itself still runs on the full image.
-function makeThumbnail(imgEl, maxSide = 320, quality = 0.75) {
-  try {
-    const w = imgEl.naturalWidth;
-    const h = imgEl.naturalHeight;
-    if (!w || !h) return null;
-    const scale = Math.min(1, maxSide / Math.max(w, h));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(w * scale));
-    canvas.height = Math.max(1, Math.round(h * scale));
-    canvas.getContext('2d').drawImage(imgEl, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', quality);
-  } catch (_) {
-    return null;
-  }
-}
-
-// Crops one face (with margin) out of the photo so every person in a group
-// photo gets their own thumbnail when saved.
-function makeFaceThumbnail(imgEl, box, maxSide = 240, quality = 0.78) {
-  try {
-    const W = imgEl.naturalWidth, H = imgEl.naturalHeight;
-    if (!W || !H || !box) return null;
-    const side = Math.max(box.width, box.height) * 1.7;
-    const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
-    const sx = Math.max(0, Math.round(cx - side / 2));
-    const sy = Math.max(0, Math.round(cy - side / 2));
-    const sw = Math.min(W - sx, Math.round(side));
-    const sh = Math.min(H - sy, Math.round(side));
-    if (sw < 8 || sh < 8) return null;
-    const scale = Math.min(1, maxSide / Math.max(sw, sh));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(sw * scale));
-    canvas.height = Math.max(1, Math.round(sh * scale));
-    canvas.getContext('2d').drawImage(imgEl, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', quality);
-  } catch (_) {
-    return null;
-  }
-}
-
 els.saveBtn.addEventListener('click', async () => {
   if (!lastResult) return;
   els.saveError.style.display = 'none';
   els.saveBtn.disabled = true;
   els.saveBtn.textContent = 'Saving…';
   try {
-    const res = await Api.saveScan({
+    await Api.saveScan({
       label: `Scan — ${new Date().toLocaleString()}`,
       ...lastResult,
-      thumbnail: makeThumbnail(els.previewImg)
+      thumbnail: els.previewImg.src.length < 400000 ? els.previewImg.src : null
     });
-    // Offline: kept in IndexedDB and uploaded automatically when back online.
-    els.saveBtn.textContent = res && res.queued ? 'Saved offline ✓' : 'Saved ✓';
+    els.saveBtn.textContent = 'Saved ✓';
   } catch (err) {
     els.saveBtn.textContent = 'Save failed';
     els.saveError.textContent = err.message;
