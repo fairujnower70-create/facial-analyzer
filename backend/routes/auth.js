@@ -101,10 +101,10 @@ function tooManyForgots(ip) {
   const hits = (forgotHits.get(ip) || []).filter((t) => now - t < 60 * 60 * 1000);
   hits.push(now);
   forgotHits.set(ip, hits);
-  return hits.length > 8;
+  return hits.length > 25;
 }
 
-// Always answers the same way, so it can't be used to discover which emails exist.
+// Tells the user when no account matches, because a person (the admin) handles the request.
 router.post(
   '/forgot',
   asyncHandler(async (req, res) => {
@@ -115,7 +115,12 @@ router.post(
     if (!isValidEmail(email)) {
       return res.status(400).json({ error: 'Please enter a valid email address' });
     }
-    const found = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+    const found = await db.query('SELECT id FROM users WHERE lower(email) = $1', [email]);
+    if (found.rowCount === 0) {
+      // The admin handles these by hand, so a typo'd email must not look like
+      // a successful request (the admin would never see it).
+      return res.status(404).json({ error: 'No account found with that email. Check the spelling or sign up.' });
+    }
     if (found.rowCount > 0) {
       const userId = found.rows[0].id;
       const pending = await db.query(

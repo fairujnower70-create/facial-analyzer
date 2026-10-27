@@ -277,8 +277,8 @@
   function renderResets(requests) {
     const section = document.getElementById('resets-section');
     const list = document.getElementById('resets-list');
-    if (!requests.length) { section.style.display = 'none'; return; }
     section.style.display = 'block';
+    if (!requests.length) { list.innerHTML = '<p class="muted" style="font-size:13.5px;">No pending password requests.</p>'; return; }
     list.innerHTML = requests
       .map(
         (r) => `
@@ -307,7 +307,7 @@
             const row = b.closest('.card');
             if (row) row.remove();
           });
-          if (!document.querySelector('#resets-list > *')) document.getElementById('resets-section').style.display = 'none';
+          if (!document.querySelector('#resets-list > *')) document.getElementById('resets-list').innerHTML = '<p class="muted" style="font-size:13.5px;">No pending password requests.</p>';
         } catch (err) {
           alert(err.message);
         }

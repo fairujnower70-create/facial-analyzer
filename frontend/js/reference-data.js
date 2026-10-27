@@ -60,7 +60,12 @@ const EXPRESSION_COLORS = {
   surprised: '#f59e0b', // amber
   neutral: '#94a3b8', // slate
   fearful: '#a78bfa', // light violet
-  disgusted: '#84cc16' // lime
+  disgusted: '#84cc16', // lime
+  // derived (heuristic) moods — see vision-core.js
+  funny: '#22d3ee', // cyan
+  excited: '#e879f9', // fuchsia
+  shy: '#f9a8d4', // soft pink
+  contempt: '#14b8a6' // teal
 };
 
 // Typical population asymmetry baseline used to calibrate the symmetry

@@ -115,7 +115,7 @@
         <div id="results-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px;"></div>
         <div id="expressions-list" style="margin-top:22px;"></div>
         <p class="field-hint" style="margin-top:20px;">
-          Age &amp; gender: model trained on IMDB-WIKI (~500k labeled faces). Expression: model trained on FER2013.
+          Age &amp; gender: model trained on IMDB-WIKI (~500k labeled faces). Expression: model trained on FER2013 (7 native emotions); funny, excited, shy and contempt are estimated from those scores plus facial geometry, so treat them as playful guesses.
           Detection &amp; landmarks: model trained on WIDER FACE / iBUG 300-W. Face shape: nearest-match against a
           reference set of facial-ratio archetypes, shown with a match confidence rather than a hard label.
         </p>
@@ -133,6 +133,7 @@
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/reference-data.js"></script>
+<script src="js/vision-core.js"></script>
 <script src="js/results-render.js"></script>
 <script src="js/share-card.js"></script>
 <script src="js/analyze.js"></script>

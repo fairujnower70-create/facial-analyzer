@@ -336,9 +336,21 @@ function midpoint(a, b) {
 }
 
 function buildResult(detection) {
-  const expressions = detection.expressions;
-  const sorted = Object.entries(expressions).sort((a, b) => b[1] - a[1]);
-  const dominant = sorted[0][0];
+  const native = detection.expressions;
+  const positions = detection.landmarks.positions;
+  // face-api's expression net only outputs 7 classes. funny / excited / shy /
+  // contempt are derived from those scores plus landmark geometry
+  // (vision-core.js) — playful estimates, not model outputs. The 7 native
+  // scores are passed through untouched.
+  let extra = null;
+  try {
+    extra = MienCore.deriveExtraExpressions(native, positions, MienCore.estimatePose(positions));
+  } catch (_) {
+    extra = null;
+  }
+  const all = Object.assign({}, native, extra || {});
+  const sorted = Object.entries(all).sort((a, b) => b[1] - a[1]);
+  const dominant = MienCore.pickDominant(native, extra);
   const shapeMatch = classifyFaceShape(detection.landmarks);
 
   return {
@@ -350,7 +362,7 @@ function buildResult(detection) {
     faceShape: shapeMatch.shape,
     faceShapeConfidence: shapeMatch.confidence,
     symmetryScore: estimateSymmetry(detection.landmarks),
-    landmarksCount: detection.landmarks.positions.length
+    landmarksCount: positions.length
   };
 }
 
@@ -381,6 +393,30 @@ function makeThumbnail(imgEl, maxSide = 320, quality = 0.75) {
     canvas.width = Math.max(1, Math.round(w * scale));
     canvas.height = Math.max(1, Math.round(h * scale));
     canvas.getContext('2d').drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', quality);
+  } catch (_) {
+    return null;
+  }
+}
+
+// Crops one face (with margin) out of the photo so every person in a group
+// photo gets their own thumbnail when saved.
+function makeFaceThumbnail(imgEl, box, maxSide = 240, quality = 0.78) {
+  try {
+    const W = imgEl.naturalWidth, H = imgEl.naturalHeight;
+    if (!W || !H || !box) return null;
+    const side = Math.max(box.width, box.height) * 1.7;
+    const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+    const sx = Math.max(0, Math.round(cx - side / 2));
+    const sy = Math.max(0, Math.round(cy - side / 2));
+    const sw = Math.min(W - sx, Math.round(side));
+    const sh = Math.min(H - sy, Math.round(side));
+    if (sw < 8 || sh < 8) return null;
+    const scale = Math.min(1, maxSide / Math.max(sw, sh));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(sw * scale));
+    canvas.height = Math.max(1, Math.round(sh * scale));
+    canvas.getContext('2d').drawImage(imgEl, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     return canvas.toDataURL('image/jpeg', quality);
   } catch (_) {
     return null;

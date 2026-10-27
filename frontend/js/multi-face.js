@@ -21,11 +21,14 @@
   panel.appendChild(box);
 
   function clearMulti() {
+    current = [];
     box.style.display = 'none';
     box.innerHTML = '';
   }
   analyzeBtn.addEventListener('click', clearMulti);
   document.getElementById('reset-btn').addEventListener('click', clearMulti);
+
+  let current = []; // [{ result, box }] for the faces on screen
 
   const PALETTE = ['#8b5cf6', '#22d3ee', '#f59e0b', '#ec4899', '#10b981', '#f43f5e', '#6366f1', '#84cc16'];
 
@@ -50,7 +53,8 @@
         return;
       }
       draw(detections);
-      render(detections.map((d) => buildResult(d)));
+      current = detections.map((d) => ({ result: buildResult(d), box: d.detection.box }));
+      render(current.map((c) => c.result));
     } catch (err) {
       els.loadingArea.style.display = 'none';
       els.previewArea.style.display = 'block';
@@ -94,7 +98,11 @@
         <h2 style="font-size:20px; margin:0;">${results.length} face${results.length === 1 ? '' : 's'} found</h2>
         <span class="muted" style="font-size:13px;">${happy} looking happy</span>
       </div>
-      <p class="field-hint" style="margin-bottom:14px;">Group results are shown here and are not saved. Use <b>Analyze</b> on a single-person photo to save to history.</p>
+      <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <p class="field-hint" style="margin:0; flex:1 1 220px;">Each face is saved as its own scan, with its own cropped photo.</p>
+        <button class="btn btn-primary" id="multi-save-btn">Save all ${results.length} to history</button>
+      </div>
+      <p id="multi-save-msg" class="field-hint" style="margin:-6px 0 12px; display:none;"></p>
       <div style="display:flex; flex-direction:column; gap:12px;">` +
       results
         .map(
@@ -113,6 +121,44 @@
         )
         .join('') +
       '</div>';
+    document.getElementById('multi-save-btn').addEventListener('click', saveAll);
     box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function saveAll() {
+    const saveBtn = document.getElementById('multi-save-btn');
+    const msg = document.getElementById('multi-save-msg');
+    if (!current.length) return;
+    saveBtn.disabled = true;
+    msg.style.display = 'block';
+    msg.style.color = '';
+    const stamp = new Date().toLocaleString();
+    let ok = 0;
+    const failed = [];
+    for (let i = 0; i < current.length; i++) {
+      saveBtn.textContent = `Saving ${i + 1}/${current.length}…`;
+      const { result, box: b } = current[i];
+      if (current[i].saved) { ok++; continue; } // already saved on an earlier attempt
+      try {
+        await Api.saveScan({
+          label: `Group photo — Face ${i + 1} of ${current.length} — ${stamp}`,
+          ...result,
+          thumbnail: makeFaceThumbnail(previewImg, b) || makeThumbnail(previewImg)
+        });
+        current[i].saved = true;
+        ok++;
+      } catch (err) {
+        failed.push(`Face ${i + 1}: ${err.message}`);
+      }
+    }
+    if (failed.length) {
+      msg.style.color = 'var(--danger)';
+      msg.textContent = `${ok} saved, ${failed.length} failed — ${failed[0]}`;
+      saveBtn.textContent = 'Retry save all';
+      saveBtn.disabled = false;
+    } else {
+      msg.textContent = `All ${ok} faces saved. Find them in History.`;
+      saveBtn.textContent = 'Saved ✓';
+    }
   }
 })();
