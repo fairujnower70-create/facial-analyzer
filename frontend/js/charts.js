@@ -3,6 +3,51 @@
 function renderCharts(scans) {
   renderEmotionDonut(document.getElementById('chart-emotions'), scans);
   renderSymmetryTrend(document.getElementById('chart-trend'), scans);
+  renderShapeChart(document.getElementById('chart-shapes'), scans);
+}
+
+const SHAPE_COLORS = { Oval: '#8b5cf6', Round: '#22d3ee', Square: '#f59e0b', Heart: '#ec4899', Long: '#10b981', Diamond: '#3b82f6' };
+
+// Face shape mix: how often each shape was the best match, plus the average
+// percentage per shape from scans that stored the full breakdown.
+function renderShapeChart(el, scans) {
+  if (!el) return;
+  const counts = {};
+  const sums = {};
+  let withScores = 0;
+  scans.forEach((s) => {
+    if (s.face_shape) counts[s.face_shape] = (counts[s.face_shape] || 0) + 1;
+    if (s.face_shape_scores) {
+      try {
+        const sc = JSON.parse(s.face_shape_scores);
+        Object.entries(sc).forEach(([k, v]) => (sums[k] = (sums[k] || 0) + v));
+        withScores++;
+      } catch (_) {}
+    }
+  });
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((n, [, c]) => n + c, 0);
+  if (!total) {
+    el.innerHTML = '<p class="muted chart-empty">Save a scan to see your face shape mix.</p>';
+    return;
+  }
+  const color = (n) => SHAPE_COLORS[n] || '#94a3b8';
+  const rows = entries
+    .map(([name, c], i) => {
+      const pct = Math.round((c / total) * 100);
+      return `<div class="shape-row">
+        <div class="row" style="justify-content:space-between; font-size:13px; margin-bottom:5px;">
+          <span><span class="dot" style="background:${color(name)}; width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:8px;"></span>${name}</span>
+          <span class="muted">${c} scan${c === 1 ? '' : 's'} · <b style="color:var(--text-primary);">${pct}%</b></span>
+        </div>
+        <div style="height:9px; border-radius:5px; background:var(--bg-input); overflow:hidden;">
+          <div class="shape-bar" style="height:100%; width:${pct}%; background:${color(name)}; animation-delay:${i * 90}ms;"></div>
+        </div>
+      </div>`;
+    })
+    .join('');
+  el.innerHTML = `<div style="display:grid; gap:14px;">${rows}</div>
+    <p class="chart-note">Most common: <b>${entries[0][0]}</b> (${Math.round((entries[0][1] / total) * 100)}% of ${total} scans)</p>`;
 }
 
 function renderEmotionDonut(el, scans) {
