@@ -68,6 +68,7 @@ const Api = {
   saveScan: (payload) => saveScanWithOfflineQueue(payload),
   getScans: () => apiRequest('/scans'),
   deleteScan: (id) => apiRequest(`/scans/${id}`, { method: 'DELETE' }),
+  adminAnalytics: () => apiRequest('/admin/analytics'),
   adminStats: () => apiRequest('/admin/stats'),
   adminUsers: () => apiRequest('/admin/users'),
   adminDeleteUser: (id) => apiRequest(`/admin/users/${id}`, { method: 'DELETE' }),

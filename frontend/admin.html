@@ -33,10 +33,66 @@
   </div>
 </nav>
 
-<main class="wrap" style="padding:44px 24px 96px;">
-  <div style="max-width:720px; margin:0 auto 36px;">
-    <h1 style="font-size:28px;">Admin panel</h1>
-    <p>Account-wide overview: users, scans, emotion trends, and moderation controls.</p>
+<style>
+.adm { max-width:1180px; margin:0 auto; padding:34px 22px 96px; }
+.adm-hero { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:22px; }
+.adm-hero h1 { font-size:30px; margin:0 0 4px; background:linear-gradient(90deg,#c4b5fd,#22d3ee 60%,#f9a8d4); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.adm-hero p { margin:0; font-size:14px; }
+.adm-live { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--text-muted); }
+.adm-live i { width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 0 0 rgba(16,185,129,.6); animation:adm-pulse 2s infinite; }
+@keyframes adm-pulse { 70% { box-shadow:0 0 0 9px rgba(16,185,129,0); } 100% { box-shadow:0 0 0 0 rgba(16,185,129,0); } }
+.adm-tabs { position:sticky; top:64px; z-index:20; display:flex; gap:6px; padding:6px; margin-bottom:22px; border-radius:16px; background:rgba(15,23,42,.85); border:1px solid var(--border); backdrop-filter:blur(10px); overflow-x:auto; }
+.adm-tab { flex:0 0 auto; padding:9px 16px; border:0; border-radius:11px; background:transparent; color:var(--text-muted); font:500 13.5px var(--font-body, Inter, sans-serif); cursor:pointer; display:flex; align-items:center; gap:8px; transition:.2s; }
+.adm-tab:hover { color:var(--text-primary); }
+.adm-tab.active { background:linear-gradient(135deg,#6d5df6,#8b5cf6); color:#fff; box-shadow:0 6px 18px rgba(109,93,246,.35); }
+.adm-badge { min-width:18px; padding:1px 6px; border-radius:10px; background:#f43f5e; color:#fff; font-size:11px; font-weight:700; }
+.adm-pane { display:none; } .adm-pane.active { display:block; animation:adm-in .35s ease both; }
+@keyframes adm-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+.adm-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:16px; }
+.adm-kpi { position:relative; overflow:hidden; padding:18px 18px 12px; border-radius:18px; border:1px solid var(--border); background:linear-gradient(160deg,rgba(139,92,246,.10),rgba(15,23,42,.0) 60%), var(--bg-card, #111a2e); }
+.adm-kpi .k-label { font-size:12.5px; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; }
+.adm-kpi .k-ico { width:30px; height:30px; border-radius:9px; display:grid; place-items:center; font-size:15px; }
+.adm-kpi .k-val { font:600 30px var(--font-display, 'Space Grotesk', sans-serif); margin:8px 0 2px; letter-spacing:-.5px; }
+.adm-kpi .k-delta { font-size:12px; }
+.k-up { color:#10b981; } .k-down { color:#f43f5e; } .k-flat { color:var(--text-muted); }
+.adm-spark { width:100%; height:34px; margin-top:6px; display:block; }
+.adm-alert { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:14px 18px; margin-bottom:16px; border-radius:16px; border:1px solid rgba(244,63,94,.45); background:rgba(244,63,94,.08); font-size:14px; }
+.adm-grid3 { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; margin-bottom:16px; }
+.adm-card { grid-column:span 4; padding:20px; border-radius:20px; border:1px solid var(--border); background:var(--bg-card, #111a2e); min-width:0; }
+.adm-card.w8 { grid-column:span 8; } .adm-card.w6 { grid-column:span 6; } .adm-card.w12 { grid-column:span 12; }
+.adm-card h3 { margin:0 0 4px; font-size:15px; } .adm-card .sub { font-size:12.5px; color:var(--text-muted); margin:0 0 14px; }
+.adm-svg { width:100%; height:auto; display:block; overflow:visible; }
+.adm-grid { stroke:var(--border); stroke-dasharray:3 4; } .adm-axis { fill:var(--text-muted); font-size:10.5px; }
+.adm-line { stroke-dasharray:1; } .adm-hit .adm-pt { opacity:0; transition:opacity .15s; } .adm-hit:hover .adm-pt { opacity:1; } .adm-hit:hover rect { fill:rgba(139,92,246,.08); }
+.adm-legend { display:flex; gap:16px; font-size:12.5px; color:var(--text-muted); margin-top:8px; } .adm-legend i, .adm-dlegend i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; }
+.adm-donut { display:flex; align-items:center; gap:18px; flex-wrap:wrap; } .adm-donut svg { width:150px; height:150px; flex:0 0 auto; }
+.adm-donut-n { fill:var(--text-primary); font:600 24px var(--font-display, sans-serif); } .adm-donut-l { fill:var(--text-muted); font-size:9px; text-transform:uppercase; letter-spacing:.8px; }
+.adm-seg { animation:adm-seg .9s ease both; } @keyframes adm-seg { from { opacity:0; stroke-width:6; } to { opacity:1; } }
+.adm-dlegend { list-style:none; margin:0; padding:0; display:grid; gap:7px; flex:1; min-width:120px; font-size:13px; color:var(--text-muted); }
+.adm-dlegend li { display:flex; align-items:center; } .adm-dlegend b { margin-left:auto; color:var(--text-primary); font-weight:600; padding-left:10px; }
+.adm-hbars { display:grid; gap:13px; } .adm-hlabel { display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px; } .adm-hlabel b { font-weight:600; }
+.adm-htrack { height:9px; border-radius:6px; background:var(--bg-input); overflow:hidden; } .adm-hfill { height:100%; border-radius:6px; transform-origin:left; animation:adm-grow .8s cubic-bezier(.2,.8,.2,1) both; }
+.adm-hsub { font-size:11.5px; color:var(--text-muted); margin-top:3px; } @keyframes adm-grow { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+.adm-col { transform-origin:bottom; transform-box:fill-box; animation:adm-up .7s cubic-bezier(.2,.8,.2,1) both; } @keyframes adm-up { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+.adm-scroll { overflow-x:auto; } .adm-heat { min-width:560px; } .adm-empty { color:var(--text-muted); font-size:13.5px; margin:8px 0; }
+.adm-feed { display:grid; gap:2px; } .adm-feed > div { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:13px; padding:9px 0; border-bottom:1px solid var(--border); } .adm-feed > div:last-child { border:0; }
+.adm-avatar { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:13px; color:#fff; flex:0 0 auto; }
+.adm-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.adm-search { padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-size:13.5px; min-width:230px; }
+.adm-table-wrap { border-radius:18px; border:1px solid var(--border); background:var(--bg-card, #111a2e); overflow-x:auto; }
+.adm-table { width:100%; border-collapse:collapse; font-size:13.5px; } .adm-table th { text-align:left; padding:14px 16px; font-size:12px; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); border-bottom:1px solid var(--border); background:rgba(139,92,246,.05); }
+.adm-table td { padding:12px 16px; border-bottom:1px solid var(--border); } .adm-table tr:last-child td { border:0; } .adm-table tbody tr:hover { background:rgba(139,92,246,.06); }
+.adm-user { display:flex; align-items:center; gap:11px; } .adm-role { font-size:11.5px; padding:3px 10px; border-radius:20px; border:1px solid var(--border-strong, var(--border)); } .adm-role.admin { color:#c4b5fd; border-color:#8b5cf6; background:rgba(139,92,246,.12); }
+.adm-req { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:16px 18px; border-radius:16px; border:1px solid var(--border); background:var(--bg-card, #111a2e); margin-bottom:10px; }
+.adm-share { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+:root[data-theme="light"] .adm-tabs { background:rgba(255,255,255,.9); }
+@media (max-width:900px) { .adm-card, .adm-card.w8, .adm-card.w6 { grid-column:span 12; } .adm-hero h1 { font-size:25px; } .adm-tabs { top:56px; } }
+@media (prefers-reduced-motion: reduce) { .adm-pane.active, .adm-seg, .adm-hfill, .adm-col, .adm-live i { animation:none; } }
+</style>
+<main class="adm" id="page">
+  <div class="adm-hero">
+    <div><h1>Admin console</h1><p>Live overview of users, scans and moods — plus moderation tools.</p></div>
+    <div class="adm-live"><i></i><span id="updated">Loading…</span><button class="btn btn-ghost" id="refresh" style="padding:7px 13px; font-size:12.5px;">Refresh</button></div>
   </div>
 
   <div id="loading" class="loader-stack"><div class="neon-ring-loader"></div></div>
@@ -45,84 +101,67 @@
     <a href="/dashboard.html" class="btn btn-primary">Back to dashboard</a>
   </div>
 
-  <div id="admin-body" style="display:none; max-width:1040px; margin:0 auto;">
-
-    <div id="stats-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:32px;"></div>
-
-    <div style="display:grid; grid-template-columns:1.1fr 1fr; gap:20px; margin-bottom:44px;" id="breakdown-row">
-      <section class="panel" style="padding:24px;">
-        <h2 style="font-size:16px; margin-bottom:16px;">Emotion breakdown (all scans)</h2>
-        <div id="emotion-breakdown"></div>
-      </section>
-      <section class="panel" style="padding:24px;">
-        <h2 style="font-size:16px; margin-bottom:16px;">Recent activity</h2>
-        <div id="recent-activity" style="display:flex; flex-direction:column; gap:10px;"></div>
-      </section>
+  <div id="admin-body" style="display:none;">
+    <div class="adm-tabs" role="tablist">
+      <button class="adm-tab active" data-pane="overview">Overview</button>
+      <button class="adm-tab" data-pane="users">Users</button>
+      <button class="adm-tab" data-pane="scans">Scan logs</button>
+      <button class="adm-tab" data-pane="requests">Password requests <span class="adm-badge" id="req-badge" style="display:none;">0</span></button>
     </div>
 
-    <section id="resets-section" style="margin-bottom:48px; display:none;">
-      <h2 style="font-size:19px; margin-bottom:6px;">Password reset requests</h2>
-      <p style="font-size:13.5px; margin-bottom:14px;">These users forgot their password. Generate a temporary password and send it to them (WhatsApp, SMS…).</p>
-      <div id="resets-list" style="display:flex; flex-direction:column; gap:10px;"></div>
-    </section>
-
-    <section style="margin-bottom:48px;">
-      <h2 style="font-size:19px; margin-bottom:16px;">Users</h2>
-      <div class="panel" style="overflow-x:auto;">
-        <table style="width:100%; border-collapse:collapse; font-size:13.5px;">
-          <thead>
-            <tr style="text-align:left; border-bottom:1px solid var(--border);">
-              <th style="padding:14px 16px;">Name</th>
-              <th style="padding:14px 16px;">Email</th>
-              <th style="padding:14px 16px;">Role</th>
-              <th style="padding:14px 16px;">Scans</th>
-              <th style="padding:14px 16px;">Joined</th>
-              <th style="padding:14px 16px;"></th>
-            </tr>
-          </thead>
-          <tbody id="users-table-body"></tbody>
-        </table>
+    <!-- OVERVIEW -->
+    <section class="adm-pane active" id="pane-overview">
+      <div id="req-alert"></div>
+      <div class="adm-kpis" id="kpis"></div>
+      <div class="adm-grid3">
+        <div class="adm-card w8"><h3>Activity — last 30 days</h3><p class="sub">New scans and new sign-ups per day</p><div id="c-activity"></div></div>
+        <div class="adm-card"><h3>Emotion mix</h3><p class="sub">Dominant emotion across all scans</p><div id="c-emotions"></div></div>
+        <div class="adm-card"><h3>Gender split</h3><p class="sub">Estimated from scans</p><div id="c-gender"></div></div>
+        <div class="adm-card"><h3>Face shapes</h3><p class="sub">Best-match shape per scan</p><div id="c-shapes"></div></div>
+        <div class="adm-card"><h3>Age groups</h3><p class="sub">Estimated age of scanned faces</p><div id="c-ages"></div></div>
+        <div class="adm-card w8"><h3>Busiest times</h3><p class="sub">Scans by weekday and hour (your local time)</p><div id="c-heat"></div></div>
+        <div class="adm-card"><h3>Top users</h3><p class="sub">Most scans saved</p><div id="c-top"></div></div>
+        <div class="adm-card w12"><h3>Recent activity</h3><p class="sub">Latest scans across the app</p><div class="adm-feed" id="c-recent"></div></div>
       </div>
     </section>
 
-    <section>
-      <div class="row" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-        <h2 style="font-size:19px; margin:0;">Scan logs (all users)</h2>
+    <!-- USERS -->
+    <section class="adm-pane" id="pane-users">
+      <div class="adm-toolbar"><h2 style="font-size:19px; margin:0;">Users <span class="muted" id="users-count" style="font-size:14px;"></span></h2>
+        <input id="user-search" class="adm-search" type="search" placeholder="Search name or email…" /></div>
+      <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>User</th><th>Role</th><th>Scans</th><th>Joined</th><th></th></tr></thead><tbody id="users-table-body"></tbody></table></div>
+    </section>
+
+    <!-- SCANS -->
+    <section class="adm-pane" id="pane-scans">
+      <div class="adm-toolbar"><h2 style="font-size:19px; margin:0;">Scan logs <span class="muted" style="font-size:14px;">(latest 200)</span></h2>
         <div class="row gap-12" style="flex-wrap:wrap;">
-          <input id="scan-search" type="search" placeholder="Search by name, email, or emotion…" style="padding:9px 13px; border-radius:var(--radius-sm); border:1px solid var(--navy-line); background:var(--bg-input); color:var(--text-primary); font-size:13.5px; min-width:220px;" />
+          <input id="scan-search" class="adm-search" type="search" placeholder="Search name, email, emotion, shape…" />
           <button class="btn btn-ghost" id="export-csv" style="padding:9px 14px; font-size:13px;">Export CSV</button>
           <button class="btn btn-ghost" id="export-json" style="padding:9px 14px; font-size:13px;">Export JSON</button>
-        </div>
-      </div>
-      <div class="panel" style="overflow-x:auto;">
-        <table style="width:100%; border-collapse:collapse; font-size:13.5px;">
-          <thead>
-            <tr style="text-align:left; border-bottom:1px solid var(--border);">
-              <th style="padding:14px 16px;">User</th>
-              <th style="padding:14px 16px;">Age</th>
-              <th style="padding:14px 16px;">Gender</th>
-              <th style="padding:14px 16px;">Expression</th>
-              <th style="padding:14px 16px;">Face shape</th>
-              <th style="padding:14px 16px;">When</th>
-              <th style="padding:14px 16px;"></th>
-            </tr>
-          </thead>
-          <tbody id="scans-table-body"></tbody>
-        </table>
-      </div>
+        </div></div>
+      <div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>User</th><th>Age</th><th>Gender</th><th>Expression</th><th>Face shape</th><th>When</th><th></th></tr></thead><tbody id="scans-table-body"></tbody></table></div>
     </section>
 
+    <!-- REQUESTS -->
+    <section class="adm-pane" id="pane-requests">
+      <h2 style="font-size:19px; margin:0 0 6px;">Password reset requests</h2>
+      <p style="font-size:13.5px; margin-bottom:16px;">A user who forgot their password appears here. Prepare a temporary password — it is also delivered to them inside the app (they collect it with their request code), and you can send it by WhatsApp or email too.</p>
+      <div id="resets-list"></div>
+    </section>
   </div>
 </main>
 
 <div id="temp-modal" class="modal-backdrop" style="display:none;">
-  <div class="panel modal-box" style="max-width:440px; text-align:center;">
-    <h2 style="font-size:19px;">Temporary password</h2>
+  <div class="panel modal-box" style="max-width:460px; text-align:center;">
+    <h2 style="font-size:19px;">Temporary password ready</h2>
     <p id="temp-for" style="font-size:13.5px;"></p>
     <div id="temp-pw" style="font-family:monospace; font-size:26px; letter-spacing:2px; padding:16px; margin:14px 0; border-radius:12px; background:var(--bg-input); user-select:all; overflow-wrap:anywhere;"></div>
-    <p style="font-size:12.5px;">Shown only once. Give it to the user; they can change it under <b>Account</b>.</p>
-    <div class="row gap-12" style="justify-content:center; margin-top:14px;">
+    <p id="temp-note" style="font-size:12.5px;"></p>
+    <div class="adm-share">
       <button class="btn btn-primary" id="temp-copy">Copy</button>
+      <a class="btn btn-ghost" id="temp-wa" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="btn btn-ghost" id="temp-mail">Email</a>
       <button class="btn btn-ghost" id="temp-close">Close</button>
     </div>
   </div>
@@ -137,158 +176,136 @@
 <script src="js/nav.js"></script>
 <script src="js/reference-data.js"></script>
 <script src="js/results-render.js"></script>
+<script src="js/admin-charts.js"></script>
 <script>
 (async function () {
-  const loading = document.getElementById('loading');
-  const denied = document.getElementById('denied');
-  const body = document.getElementById('admin-body');
-  let allScans = [];
-  let me;
+  const $ = (id) => document.getElementById(id);
+  const loading = $('loading'), denied = $('denied'), body = $('admin-body');
+  const C = AdminCharts, esc = C.esc;
+  let allScans = [], allUsers = [], me;
 
-  try {
-    me = (await Api.me()).user;
-  } catch (_) {
-    window.location.href = '/login.html?next=admin';
-    return;
+  try { me = (await Api.me()).user; } catch (_) { window.location.href = '/login.html?next=admin'; return; }
+  if (me.role !== 'admin') { loading.style.display = 'none'; denied.style.display = 'block'; return; }
+
+  // ---------- tabs ----------
+  function openPane(name) {
+    document.querySelectorAll('.adm-tab').forEach((t) => t.classList.toggle('active', t.dataset.pane === name));
+    document.querySelectorAll('.adm-pane').forEach((p) => p.classList.toggle('active', p.id === 'pane-' + name));
+    try { history.replaceState(null, '', '#' + name); } catch (_) {}
   }
+  document.querySelectorAll('.adm-tab').forEach((t) => t.addEventListener('click', () => openPane(t.dataset.pane)));
 
-  if (me.role !== 'admin') {
-    loading.style.display = 'none';
-    denied.style.display = 'block';
-    return;
+  const SHAPE_COLORS = { Oval: '#8b5cf6', Round: '#22d3ee', Square: '#f59e0b', Heart: '#ec4899', Long: '#10b981', Diamond: '#3b82f6' };
+  const GENDER_COLORS = { male: '#3b82f6', female: '#ec4899', unknown: '#94a3b8' };
+  const AV = ['#6d5df6', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#14b8a6', '#8b5cf6'];
+  const avatar = (name, i) => `<span class="adm-avatar" style="background:${AV[(String(name).charCodeAt(0) + (i || 0)) % AV.length]}">${esc((name || '?').trim().charAt(0).toUpperCase())}</span>`;
+
+  async function load() {
+    $('updated').textContent = 'Updating…';
+    try {
+      const [stats, an, usersRes, scansRes, resetsRes] = await Promise.all([
+        Api.adminStats(), Api.adminAnalytics(), Api.adminUsers(), Api.adminScans(),
+        Api.adminResets().catch(() => ({ requests: [] }))
+      ]);
+      loading.style.display = 'none';
+      body.style.display = 'block';
+      allScans = scansRes.scans; allUsers = usersRes.users;
+      renderKpis(stats, an);
+      renderCharts(stats, an);
+      renderRecent(stats.recentActivity || []);
+      renderUsers(allUsers);
+      renderResets(resetsRes.requests);
+      renderScans(allScans);
+      $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const h = (location.hash || '').slice(1);
+      if (['users', 'scans', 'requests'].includes(h)) openPane(h);
+    } catch (err) {
+      loading.style.display = 'block';
+      loading.innerHTML = `<p class="muted">Could not load admin data: ${esc(err.message)}</p>`;
+    }
   }
+  $('refresh').addEventListener('click', load);
 
-  try {
-    const [stats, usersRes, scansRes, resetsRes] = await Promise.all([Api.adminStats(), Api.adminUsers(), Api.adminScans(), Api.adminResets().catch(() => ({ requests: [] }))]);
-    loading.style.display = 'none';
-    body.style.display = 'block';
-    allScans = scansRes.scans;
-    renderStats(stats);
-    renderBreakdown(stats.expressionBreakdown || []);
-    renderActivity(stats.recentActivity || []);
-    renderUsers(usersRes.users);
-    renderResets(resetsRes.requests);
-    renderScans(allScans);
-  } catch (err) {
-    loading.innerHTML = `<p class="muted">Could not load admin data: ${err.message}</p>`;
+  // ---------- KPI cards ----------
+  function delta(now, prev) {
+    if (!prev && !now) return '<span class="k-flat">no change this week</span>';
+    if (!prev) return `<span class="k-up">▲ ${now} this week</span>`;
+    const p = Math.round(((now - prev) / prev) * 100);
+    return `<span class="${p > 0 ? 'k-up' : p < 0 ? 'k-down' : 'k-flat'}">${p > 0 ? '▲' : p < 0 ? '▼' : '•'} ${Math.abs(p)}% vs last week</span>`;
   }
-
-  // ---------- stats cards ----------
-  function renderStats(s) {
+  function renderKpis(s, an) {
+    const w = an.weekly;
+    const scansSeries = an.scansPerDay.map((d) => d.count);
+    const userSeries = an.signupsPerDay.map((d) => d.count);
     const cards = [
-      ['Total users', s.totalUsers],
-      ['Total scans', s.totalScans],
-      ['Scans today', s.scansToday],
-      ['New users (7d)', s.newUsersThisWeek]
+      ['Total users', s.totalUsers, '👥', '#6d5df6', delta(w.users_now, w.users_prev), userSeries],
+      ['Total scans', s.totalScans, '📸', '#22d3ee', delta(w.scans_now, w.scans_prev), scansSeries],
+      ['Scans today', s.scansToday, '⚡', '#f59e0b', `<span class="k-flat">${w.scans_now} in the last 7 days</span>`, scansSeries.slice(-10)],
+      ['New users (7d)', s.newUsersThisWeek, '🌱', '#10b981', `<span class="k-flat">${w.users_prev} the week before</span>`, userSeries.slice(-14)],
+      ['Avg symmetry', an.avgSymmetry != null ? an.avgSymmetry + '/100' : '—', '✦', '#ec4899', `<span class="k-flat">${an.avgAge != null ? 'avg age ~' + an.avgAge : 'no scans yet'}</span>`, null]
     ];
-    document.getElementById('stats-grid').innerHTML = cards
-      .map(
-        ([label, value]) => `
-        <div class="card">
-          <div class="muted" style="font-size:12.5px; margin-bottom:6px;">${label}</div>
-          <div style="font-family:var(--font-display); font-size:26px;">${value}</div>
-        </div>`
-      )
-      .join('');
+    $('kpis').innerHTML = cards.map(([label, val, ico, color, d, series]) => `
+      <div class="adm-kpi"><div class="k-label"><span>${label}</span><span class="k-ico" style="background:${color}22; color:${color};">${ico}</span></div>
+      <div class="k-val">${val}</div><div class="k-delta">${d}</div>${series ? C.sparkline(series, color) : ''}</div>`).join('');
   }
 
-  // ---------- emotion breakdown ----------
-  function renderBreakdown(rows) {
-    const el = document.getElementById('emotion-breakdown');
-    if (!rows.length) {
-      el.innerHTML = '<p class="muted" style="font-size:13.5px;">No scans logged yet.</p>';
-      return;
-    }
-    const max = Math.max(...rows.map((r) => r.count));
-    el.innerHTML = rows
-      .map((r) => {
-        const color = emotionColor(r.expression);
-        const pct = Math.round((r.count / max) * 100);
-        return `
-        <div style="margin-bottom:12px;">
-          <div class="row" style="justify-content:space-between; font-size:13px; margin-bottom:5px;">
-            <span>${capWord(r.expression)}</span><span class="muted">${r.count}</span>
-          </div>
-          <div style="height:8px; border-radius:4px; background:var(--bg-input); overflow:hidden;">
-            <div style="height:100%; width:${pct}%; background:${color};"></div>
-          </div>
-        </div>`;
-      })
-      .join('');
+  // ---------- charts ----------
+  function renderCharts(s, an) {
+    C.areaChart($('c-activity'), [
+      { name: 'Scans', color: '#8b5cf6', values: an.scansPerDay.map((d) => d.count) },
+      { name: 'Sign-ups', color: '#22d3ee', values: an.signupsPerDay.map((d) => d.count) }
+    ], an.scansPerDay.map((d) => d.day));
+    C.donut($('c-emotions'), (s.expressionBreakdown || []).map((r) => ({ label: capWord(r.expression), value: r.count, color: emotionColor(r.expression) })), 'scans');
+    C.donut($('c-gender'), an.gender.map((g) => ({ label: capWord(g.label), value: g.count, color: GENDER_COLORS[g.label] || '#94a3b8' })), 'scans');
+    C.hbars($('c-shapes'), an.faceShapes.map((f) => ({ label: f.label, value: f.count, color: SHAPE_COLORS[f.label] || '#94a3b8' })));
+    C.columns($('c-ages'), an.ageBuckets, '#6d5df6');
+    C.heatmap($('c-heat'), an.activity, '#8b5cf6');
+    C.hbars($('c-top'), an.topUsers.map((u, i) => ({ label: u.name, value: u.count, color: AV[i % AV.length], sub: u.email })), ' scans');
   }
 
-  // ---------- recent activity ----------
-  function renderActivity(rows) {
-    const el = document.getElementById('recent-activity');
-    if (!rows.length) {
-      el.innerHTML = '<p class="muted" style="font-size:13.5px;">No activity yet.</p>';
-      return;
-    }
-    el.innerHTML = rows
-      .map(
-        (r) => `
-      <div class="row" style="justify-content:space-between; font-size:13px; padding-bottom:8px; border-bottom:1px solid var(--border);">
-        <span>${escapeHtml(r.user_name)} ${emotionBadge(r.dominant_expression)}</span>
-        <span class="muted">${new Date(r.created_at).toLocaleString()}</span>
-      </div>`
-      )
-      .join('');
+  function renderRecent(rows) {
+    $('c-recent').innerHTML = rows.length ? rows.map((r, i) => `
+      <div><span class="row" style="gap:11px; align-items:center;">${avatar(r.user_name, i)}<span>${esc(r.user_name)}</span> ${emotionBadge(r.dominant_expression)}</span>
+      <span class="muted" style="font-size:12.5px;">${new Date(r.created_at).toLocaleString()}</span></div>`).join('') : '<p class="adm-empty">No activity yet.</p>';
   }
 
-  // ---------- users table ----------
+  // ---------- users ----------
   function renderUsers(users) {
-    document.getElementById('users-table-body').innerHTML = users
-      .map(
-        (u) => `
-        <tr id="user-row-${u.id}" style="border-bottom:1px solid var(--border);">
-          <td style="padding:12px 16px;">${escapeHtml(u.name)}</td>
-          <td style="padding:12px 16px;" class="muted">${escapeHtml(u.email)}</td>
-          <td style="padding:12px 16px;">
-            <span style="font-size:12px; padding:3px 9px; border-radius:20px; border:1px solid var(--border-strong); ${u.role === 'admin' ? 'color:var(--neon);' : 'color:var(--text-muted);'}">${u.role}</span>
-          </td>
-          <td style="padding:12px 16px;">${u.scan_count}</td>
-          <td style="padding:12px 16px;" class="muted">${new Date(u.created_at).toLocaleDateString()}</td>
-          <td style="padding:12px 16px;">
-            <button class="btn btn-ghost" style="padding:6px 12px; font-size:12.5px;" data-reset-user="${u.id}">Reset password</button>
-            ${u.id === me.id ? '' : `<button class="btn btn-danger-ghost" style="padding:6px 12px; font-size:12.5px;" data-del-user="${u.id}">Delete</button>`}
-          </td>
-        </tr>`
-      )
-      .join('');
-
+    $('users-count').textContent = `(${users.length})`;
+    $('users-table-body').innerHTML = users.map((u, i) => `
+      <tr id="user-row-${u.id}">
+        <td><div class="adm-user">${avatar(u.name, i)}<div>${esc(u.name)}<div class="muted" style="font-size:12px;">${esc(u.email)}</div></div></div></td>
+        <td><span class="adm-role ${u.role === 'admin' ? 'admin' : ''}">${u.role}</span></td>
+        <td>${u.scan_count}</td>
+        <td class="muted">${new Date(u.created_at).toLocaleDateString()}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-ghost" style="padding:6px 12px; font-size:12.5px;" data-reset-user="${u.id}">Reset password</button>
+          ${u.id === me.id ? '' : `<button class="btn btn-danger-ghost" style="padding:6px 12px; font-size:12.5px;" data-del-user="${u.id}">Delete</button>`}
+        </td></tr>`).join('') || '<tr><td colspan="5" class="muted">No users found.</td></tr>';
     bindResetButtons();
-
-    document.querySelectorAll('[data-del-user]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('Delete this user and all of their saved scans?')) return;
-        btn.disabled = true;
-        try {
-          await Api.adminDeleteUser(btn.getAttribute('data-del-user'));
-          document.getElementById(`user-row-${btn.getAttribute('data-del-user')}`).remove();
-        } catch (err) {
-          alert(err.message);
-          btn.disabled = false;
-        }
-      });
-    });
+    document.querySelectorAll('[data-del-user]').forEach((btn) => btn.addEventListener('click', async () => {
+      if (!confirm('Delete this user and all of their saved scans?')) return;
+      btn.disabled = true;
+      try { await Api.adminDeleteUser(btn.dataset.delUser); load(); } catch (err) { alert(err.message); btn.disabled = false; }
+    }));
   }
+  $('user-search').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    renderUsers(q ? allUsers.filter((u) => (u.name + ' ' + u.email).toLowerCase().includes(q)) : allUsers);
+  });
 
   // ---------- password resets ----------
   function renderResets(requests) {
-    const section = document.getElementById('resets-section');
-    const list = document.getElementById('resets-list');
-    section.style.display = 'block';
-    if (!requests.length) { list.innerHTML = '<p class="muted" style="font-size:13.5px;">No pending password requests.</p>'; return; }
-    list.innerHTML = requests
-      .map(
-        (r) => `
-      <div class="card row" id="reset-${r.id}" style="justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-        <div><div style="font-family:var(--font-display);">${escapeHtml(r.name)}</div>
-        <div class="muted" style="font-size:12.5px;">${escapeHtml(r.email)} · ${new Date(r.created_at).toLocaleString()}</div></div>
-        <button class="btn btn-primary" style="padding:8px 14px; font-size:13px;" data-reset-user="${r.user_id}" data-reset-req="${r.id}">Generate temp password</button>
-      </div>`
-      )
-      .join('');
+    const badge = $('req-badge');
+    badge.textContent = requests.length;
+    badge.style.display = requests.length ? 'inline-block' : 'none';
+    $('req-alert').innerHTML = requests.length
+      ? `<div class="adm-alert"><span>🔑 <b>${requests.length}</b> password reset request${requests.length === 1 ? '' : 's'} waiting</span><button class="btn btn-primary" style="padding:8px 14px; font-size:13px;" id="go-req">Review</button></div>` : '';
+    const go = $('go-req'); if (go) go.addEventListener('click', () => openPane('requests'));
+    $('resets-list').innerHTML = requests.length ? requests.map((r, i) => `
+      <div class="adm-req" id="reset-${r.id}"><div class="adm-user">${avatar(r.name, i)}<div>${esc(r.name)}<div class="muted" style="font-size:12.5px;">${esc(r.email)} · ${new Date(r.created_at).toLocaleString()}</div></div></div>
+      <button class="btn btn-primary" style="padding:8px 14px; font-size:13px;" data-reset-user="${r.user_id}" data-reset-req="${r.id}">Prepare temp password</button></div>`).join('')
+      : '<p class="adm-empty">No pending password requests. 🎉</p>';
     bindResetButtons();
   }
 
@@ -296,132 +313,72 @@
     document.querySelectorAll('[data-reset-user]:not([data-bound])').forEach((btn) => {
       btn.setAttribute('data-bound', '1');
       btn.addEventListener('click', async () => {
-        if (!confirm('Generate a new temporary password? The old password will stop working.')) return;
+        const custom = prompt('Set a new temporary password (min 8 characters).\nLeave empty to generate one automatically.', '');
+        if (custom === null) return;
         btn.disabled = true;
         try {
-          const res = await Api.adminResetPassword(btn.getAttribute('data-reset-user'));
-          document.getElementById('temp-for').textContent = `${res.name} (${res.email})`;
-          document.getElementById('temp-pw').textContent = res.temporaryPassword;
-          document.getElementById('temp-modal').style.display = 'flex';
-          document.querySelectorAll(`[data-reset-user="${btn.getAttribute('data-reset-user')}"][data-reset-req]`).forEach((b) => {
-            const row = b.closest('.card');
-            if (row) row.remove();
-          });
-          if (!document.querySelector('#resets-list > *')) document.getElementById('resets-list').innerHTML = '<p class="muted" style="font-size:13.5px;">No pending password requests.</p>';
-        } catch (err) {
-          alert(err.message);
-        }
+          const res = await Api.adminResetPassword(btn.dataset.resetUser, custom.trim());
+          showTemp(res);
+          load();
+        } catch (err) { alert(err.message); }
         btn.disabled = false;
       });
     });
   }
-  document.getElementById('temp-close').addEventListener('click', () => {
-    document.getElementById('temp-modal').style.display = 'none';
-    document.getElementById('temp-pw').textContent = '';
-  });
-  document.getElementById('temp-copy').addEventListener('click', () => {
-    const t = document.getElementById('temp-pw').textContent;
-    if (navigator.clipboard) navigator.clipboard.writeText(t).catch(() => {});
-    document.getElementById('temp-copy').textContent = 'Copied ✓';
-    setTimeout(() => (document.getElementById('temp-copy').textContent = 'Copy'), 1500);
-  });
-
-  // ---------- scans table ----------
-  function renderScans(scans) {
-    const tbody = document.getElementById('scans-table-body');
-    if (!scans.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="padding:20px 16px;" class="muted">No matching scans.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = scans
-      .map(
-        (s) => `
-        <tr id="scan-row-${s.id}" style="border-bottom:1px solid var(--border);">
-          <td style="padding:12px 16px;">${escapeHtml(s.user_name)}<div class="muted" style="font-size:12px;">${escapeHtml(s.user_email)}</div></td>
-          <td style="padding:12px 16px;">${Math.round(s.age)}</td>
-          <td style="padding:12px 16px;">${capWord(s.gender)}</td>
-          <td style="padding:12px 16px;">${emotionBadge(s.dominant_expression)}</td>
-          <td style="padding:12px 16px;">${s.face_shape || '—'}</td>
-          <td style="padding:12px 16px;" class="muted">${new Date(s.created_at).toLocaleString()}</td>
-          <td style="padding:12px 16px;">
-            <button class="btn btn-danger-ghost" style="padding:6px 12px; font-size:12.5px;" data-del-scan="${s.id}">Delete</button>
-          </td>
-        </tr>`
-      )
-      .join('');
-
-    document.querySelectorAll('[data-del-scan]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        btn.disabled = true;
-        try {
-          const id = btn.getAttribute('data-del-scan');
-          await Api.adminDeleteScan(id);
-          document.getElementById(`scan-row-${id}`).remove();
-          allScans = allScans.filter((s) => String(s.id) !== String(id));
-        } catch (err) {
-          alert(err.message);
-          btn.disabled = false;
-        }
-      });
-    });
+  function showTemp(res) {
+    $('temp-for').textContent = `${res.name} (${res.email})`;
+    $('temp-pw').textContent = res.temporaryPassword;
+    $('temp-note').textContent = res.deliveredInApp
+      ? 'Also delivered inside the app: the user can collect it once on the Forgot-password page with their request code.'
+      : 'Shown only once — send it to the user (they can change it under Account).';
+    const msg = `Hi ${res.name}, your temporary Mien password is: ${res.temporaryPassword}\nLog in at ${location.origin}/login.html and change it under Account.`;
+    $('temp-wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
+    $('temp-mail').href = `mailto:${encodeURIComponent(res.email)}?subject=${encodeURIComponent('Your Mien temporary password')}&body=${encodeURIComponent(msg)}`;
+    $('temp-modal').style.display = 'flex';
   }
+  $('temp-close').addEventListener('click', () => { $('temp-modal').style.display = 'none'; $('temp-pw').textContent = ''; });
+  $('temp-copy').addEventListener('click', () => {
+    if (navigator.clipboard) navigator.clipboard.writeText($('temp-pw').textContent).catch(() => {});
+    $('temp-copy').textContent = 'Copied ✓';
+    setTimeout(() => ($('temp-copy').textContent = 'Copy'), 1500);
+  });
 
-  // ---------- search/filter ----------
-  document.getElementById('scan-search').addEventListener('input', (e) => {
+  // ---------- scans ----------
+  function renderScans(scans) {
+    const tbody = $('scans-table-body');
+    if (!scans.length) { tbody.innerHTML = '<tr><td colspan="7" class="muted">No matching scans.</td></tr>'; return; }
+    tbody.innerHTML = scans.map((s, i) => `
+      <tr id="scan-row-${s.id}">
+        <td><div class="adm-user">${avatar(s.user_name, i)}<div>${esc(s.user_name)}<div class="muted" style="font-size:12px;">${esc(s.user_email)}</div></div></div></td>
+        <td>${Math.round(s.age)}</td><td>${capWord(s.gender)}</td><td>${emotionBadge(s.dominant_expression)}</td>
+        <td>${esc(s.face_shape || '—')}</td><td class="muted">${new Date(s.created_at).toLocaleString()}</td>
+        <td><button class="btn btn-danger-ghost" style="padding:6px 12px; font-size:12.5px;" data-del-scan="${s.id}">Delete</button></td></tr>`).join('');
+    document.querySelectorAll('[data-del-scan]').forEach((btn) => btn.addEventListener('click', async () => {
+      if (!confirm('Delete this scan?')) return;
+      btn.disabled = true;
+      try { await Api.adminDeleteScan(btn.dataset.delScan); load(); } catch (err) { alert(err.message); btn.disabled = false; }
+    }));
+  }
+  $('scan-search').addEventListener('input', (e) => {
     const q = e.target.value.trim().toLowerCase();
-    if (!q) return renderScans(allScans);
-    const filtered = allScans.filter((s) =>
-      [s.user_name, s.user_email, s.dominant_expression, s.face_shape, s.gender]
-        .filter(Boolean)
-        .some((field) => String(field).toLowerCase().includes(q))
-    );
-    renderScans(filtered);
+    renderScans(!q ? allScans : allScans.filter((s) => [s.user_name, s.user_email, s.dominant_expression, s.face_shape, s.gender].filter(Boolean).some((f) => String(f).toLowerCase().includes(q))));
   });
 
   // ---------- export ----------
-  document.getElementById('export-csv').addEventListener('click', () => {
+  function download(content, type, filename) {
+    const url = URL.createObjectURL(new Blob([content], { type }));
+    const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+  const csvEsc = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  $('export-csv').addEventListener('click', () => {
     if (!allScans.length) return;
     const cols = ['id', 'user_name', 'user_email', 'age', 'gender', 'dominant_expression', 'face_shape', 'symmetry_score', 'created_at'];
-    const rows = [cols.join(',')].concat(
-      allScans.map((s) => cols.map((c) => csvEscape(s[c])).join(','))
-    );
-    downloadBlob(rows.join('\n'), 'text/csv', 'mien-scan-logs.csv');
+    download([cols.join(',')].concat(allScans.map((s) => cols.map((c) => csvEsc(s[c])).join(','))).join('\n'), 'text/csv', 'mien-scan-logs.csv');
   });
+  $('export-json').addEventListener('click', () => { if (allScans.length) download(JSON.stringify(allScans, null, 2), 'application/json', 'mien-scan-logs.json'); });
 
-  document.getElementById('export-json').addEventListener('click', () => {
-    if (!allScans.length) return;
-    downloadBlob(JSON.stringify(allScans, null, 2), 'application/json', 'mien-scan-logs.json');
-  });
-
-  function downloadBlob(content, type, filename) {
-    const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  function csvEscape(value) {
-    const s = value == null ? '' : String(value);
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  }
-
-  function escapeHtml(s) {
-    const div = document.createElement('div');
-    div.textContent = s == null ? '' : String(s);
-    return div.innerHTML;
-  }
+  load();
 })();
 </script>
-
-<style>
-  @media (max-width: 800px) {
-    #breakdown-row { grid-template-columns: 1fr !important; }
-  }
-</style>
 </body>
 </html>

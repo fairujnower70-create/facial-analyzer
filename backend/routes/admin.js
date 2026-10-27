@@ -43,6 +43,66 @@ router.get(
   })
 );
 
+// Aggregates for the admin charts (all computed in SQL, nothing heavy sent to the browser).
+router.get(
+  '/analytics',
+  asyncHandler(async (req, res) => {
+    const [daily, signups, gender, shapes, ages, hours, topUsers, totals, weekly] = await Promise.all([
+      db.query(
+        `SELECT to_char(d, 'YYYY-MM-DD') AS day, COALESCE(c.n, 0)::int AS count
+         FROM generate_series(current_date - 29, current_date, '1 day') d
+         LEFT JOIN (SELECT created_at::date AS day, COUNT(*) AS n FROM scans GROUP BY 1) c ON c.day = d::date
+         ORDER BY d`
+      ),
+      db.query(
+        `SELECT to_char(d, 'YYYY-MM-DD') AS day, COALESCE(c.n, 0)::int AS count
+         FROM generate_series(current_date - 29, current_date, '1 day') d
+         LEFT JOIN (SELECT created_at::date AS day, COUNT(*) AS n FROM users GROUP BY 1) c ON c.day = d::date
+         ORDER BY d`
+      ),
+      db.query("SELECT COALESCE(gender, 'unknown') AS label, COUNT(*)::int AS count FROM scans GROUP BY 1 ORDER BY 2 DESC"),
+      db.query("SELECT face_shape AS label, COUNT(*)::int AS count FROM scans WHERE face_shape IS NOT NULL GROUP BY 1 ORDER BY 2 DESC"),
+      db.query(
+        `SELECT bucket AS label, COUNT(*)::int AS count FROM (
+           SELECT CASE WHEN age < 18 THEN '<18' WHEN age < 25 THEN '18-24' WHEN age < 35 THEN '25-34'
+                       WHEN age < 45 THEN '35-44' WHEN age < 55 THEN '45-54' ELSE '55+' END AS bucket
+           FROM scans WHERE age IS NOT NULL) t GROUP BY 1`
+      ),
+      db.query(
+        `SELECT EXTRACT(DOW FROM created_at AT TIME ZONE 'UTC')::int AS dow,
+                EXTRACT(HOUR FROM created_at AT TIME ZONE 'UTC')::int AS hour, COUNT(*)::int AS count
+         FROM scans GROUP BY 1, 2`
+      ),
+      db.query(
+        `SELECT u.name, u.email, COUNT(s.id)::int AS count
+         FROM users u JOIN scans s ON s.user_id = u.id GROUP BY u.id ORDER BY count DESC LIMIT 6`
+      ),
+      db.query('SELECT ROUND(AVG(symmetry_score))::int AS sym, ROUND(AVG(age))::int AS age FROM scans'),
+      db.query(
+        `SELECT
+           (SELECT COUNT(*)::int FROM scans WHERE created_at >= now() - interval '7 days') AS scans_now,
+           (SELECT COUNT(*)::int FROM scans WHERE created_at >= now() - interval '14 days' AND created_at < now() - interval '7 days') AS scans_prev,
+           (SELECT COUNT(*)::int FROM users WHERE created_at >= now() - interval '7 days') AS users_now,
+           (SELECT COUNT(*)::int FROM users WHERE created_at >= now() - interval '14 days' AND created_at < now() - interval '7 days') AS users_prev`
+      )
+    ]);
+    const order = ['<18', '18-24', '25-34', '35-44', '45-54', '55+'];
+    const ageMap = Object.fromEntries(ages.rows.map((r) => [r.label, r.count]));
+    res.json({
+      scansPerDay: daily.rows,
+      signupsPerDay: signups.rows,
+      gender: gender.rows,
+      faceShapes: shapes.rows,
+      ageBuckets: order.map((l) => ({ label: l, count: ageMap[l] || 0 })),
+      activity: hours.rows, // dow 0=Sunday, hour in UTC
+      topUsers: topUsers.rows,
+      avgSymmetry: totals.rows[0].sym,
+      avgAge: totals.rows[0].age,
+      weekly: weekly.rows[0]
+    });
+  })
+);
+
 router.get(
   '/users',
   asyncHandler(async (req, res) => {

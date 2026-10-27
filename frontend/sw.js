@@ -7,7 +7,7 @@
 //  * POST /api/scans while offline ... stored in IndexedDB, synced later
 try { importScripts('/js/offline-queue.js'); } catch (_) {}
 
-const V = 'v5';
+const V = 'v6';
 const STATIC = 'mien-static-' + V;
 const MODELS = 'mien-models-v1';
 const API = 'mien-api-' + V;
