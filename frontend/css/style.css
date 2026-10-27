@@ -1335,3 +1335,7 @@ main > *:nth-child(3) { animation-delay: 0.12s; }
 .shape-bar { transform-origin: left; animation: shape-grow .8s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes shape-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @media (max-width: 700px) { .chart-grid { grid-template-columns: 1fr; } }
+
+/* Mirror the live camera (selfie view) so moving left looks like moving left.
+   The overlay canvas is mirrored with it so landmarks stay aligned. */
+.live-frame video, .live-frame canvas#live-canvas { transform: scaleX(-1); }

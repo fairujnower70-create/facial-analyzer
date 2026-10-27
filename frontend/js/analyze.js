@@ -131,7 +131,12 @@ els.captureBtn.addEventListener('click', () => {
   const canvas = document.createElement('canvas');
   canvas.width = els.webcam.videoWidth;
   canvas.height = els.webcam.videoHeight;
-  canvas.getContext('2d').drawImage(els.webcam, 0, 0);
+  // The live view is mirrored like a selfie (so left/right feel natural);
+  // save the photo the same way round as what the person saw.
+  const ctx = canvas.getContext('2d');
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(els.webcam, 0, 0);
   showPreview(canvas.toDataURL('image/png'));
 });
 
