@@ -39,6 +39,7 @@
     try {
       await ensureModels();
       els.loadingLabel.textContent = 'Finding all faces…';
+      const tInfer = performance.now();
       const detections = await faceapi
         .detectAllFaces(previewImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
         .withFaceLandmarks()
@@ -53,6 +54,7 @@
         return;
       }
       draw(detections);
+      MienTelemetry.record({ source: 'multi', faces: detections.length, inferenceMs: performance.now() - tInfer, totalMs: performance.now() - tInfer });
       current = detections.map((d) => ({ result: buildResult(d), box: d.detection.box }));
       render(current.map((c) => c.result));
     } catch (err) {

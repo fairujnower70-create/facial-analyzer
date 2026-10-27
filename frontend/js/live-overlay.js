@@ -22,10 +22,7 @@
     if (typeof faceapi === 'undefined') throw new Error('face-api not ready');
     if (faceapi.nets.tinyFaceDetector.isLoaded && faceapi.nets.faceLandmark68Net.isLoaded) return;
     if (!loading) {
-      loading = Promise.all([
-        faceapi.nets.tinyFaceDetector.isLoaded ? null : faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.isLoaded ? null : faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
-      ]);
+      loading = MienCore.loadNets([faceapi.nets.tinyFaceDetector, faceapi.nets.faceLandmark68Net]);
     }
     await loading;
   }

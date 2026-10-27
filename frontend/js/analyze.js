@@ -1,7 +1,8 @@
 // Dashboard logic: auth guard, capture (upload or webcam), run face-api.js
 // analysis fully client-side, render results, optionally save to backend.
 
-const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model';
+// Models load from /models (cached by the service worker, so scanning works
+// offline). vision-core.js falls back to the CDN if they are not found.
 
 const els = {
   tabUpload: document.getElementById('tab-upload'),
@@ -32,13 +33,15 @@ const els = {
 let modelsLoaded = false;
 let webcamStream = null;
 let lastResult = null; // structured result for saving
+let scanSource = 'upload';
 
 // ---------- auth guard ----------
 (async function guard() {
   try {
     await Api.me();
-  } catch (_) {
-    window.location.href = '/login.html?next=scan';
+  } catch (err) {
+    // Only a real "not signed in" answer goes to login; being offline must not.
+    if (err && err.status === 401) window.location.href = '/login.html?next=scan';
   }
 })();
 
@@ -115,12 +118,16 @@ function loadImageFile(file) {
     return;
   }
   const reader = new FileReader();
-  reader.onload = () => showPreview(reader.result);
+  reader.onload = () => {
+    scanSource = 'upload';
+    showPreview(reader.result);
+  };
   reader.onerror = () => showError('Could not read that file — please try another image.');
   reader.readAsDataURL(file);
 }
 
 els.captureBtn.addEventListener('click', () => {
+  scanSource = 'camera';
   const canvas = document.createElement('canvas');
   canvas.width = els.webcam.videoWidth;
   canvas.height = els.webcam.videoHeight;
@@ -156,19 +163,28 @@ async function ensureModels() {
   if (modelsLoaded) return;
   els.loadingArea.style.display = 'flex';
   els.loadingLabel.textContent = 'Loading analysis models…';
+  const initStart = performance.now();
   // SsdMobilenetv1 (trained on the WIDER FACE dataset) gives a materially
   // more accurate face box and landmark alignment than the tiny/fast
   // detector, which matters because every downstream ratio (face shape,
   // symmetry) is computed from those landmark positions — a noisier box in
   // means noisier ratios out. It's slower, which is fine for a one-shot
   // analysis rather than a live video overlay.
-  await Promise.all([
-    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL), // trained on iBUG 300-W / 300VW
-    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL), // trained on FER2013
-    faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL) // trained on IMDB-WIKI (~500k labeled faces)
+  await MienCore.loadNets([
+    faceapi.nets.ssdMobilenetv1,
+    faceapi.nets.faceLandmark68Net, // trained on iBUG 300-W / 300VW
+    faceapi.nets.faceExpressionNet, // trained on FER2013
+    faceapi.nets.ageGenderNet // trained on IMDB-WIKI (~500k labeled faces)
   ]);
   modelsLoaded = true;
+  MienTelemetry.noteModelInit(performance.now() - initStart, MienCore.getModelSource());
+  // Make sure the service worker has these files in its offline cache.
+  try {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      const urls = performance.getEntriesByType('resource').map((e) => e.name).filter((u) => /\/(models|vendor)\//.test(u));
+      if (urls.length) navigator.serviceWorker.controller.postMessage({ type: 'cache-urls', urls });
+    }
+  } catch (_) {}
 }
 
 // ---------- analysis ----------
@@ -178,27 +194,39 @@ async function runAnalysis() {
   clearError();
   els.previewArea.style.display = 'none';
   els.loadingArea.style.display = 'flex';
+  const t0 = performance.now();
 
   try {
     await ensureModels();
     els.loadingLabel.textContent = 'Analyzing face…';
 
+    const tInfer = performance.now();
     const detection = await faceapi
       .detectSingleFace(els.previewImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
       .withFaceLandmarks()
       .withFaceExpressions()
       .withAgeAndGender();
+    const inferenceMs = performance.now() - tInfer;
 
     els.loadingArea.style.display = 'none';
     els.previewArea.style.display = 'block';
 
     if (!detection) {
+      MienTelemetry.record({ source: scanSource, faces: 0, inferenceMs, totalMs: performance.now() - t0, error: 'NO_FACE' });
       showError('No face was clearly detected. Try a well-lit, front-facing photo.');
       return;
     }
 
     drawOverlay(detection);
     lastResult = buildResult(detection);
+    MienTelemetry.record({
+      source: scanSource,
+      faces: 1,
+      inferenceMs,
+      totalMs: performance.now() - t0,
+      pose: MienCore.estimatePose(detection.landmarks.positions),
+      dominant: lastResult.dominantExpression
+    });
     renderResults(lastResult);
   } catch (err) {
     els.loadingArea.style.display = 'none';
@@ -374,7 +402,9 @@ function buildResult(detection) {
     faceShapeConfidence: shapeMatch.confidence,
     faceShapeScores: shapeMatch.scores,
     symmetryScore: estimateSymmetry(detection.landmarks),
-    landmarksCount: positions.length
+    landmarksCount: positions.length,
+    clientId: OfflineQueue.uuid(),
+    capturedAt: new Date().toISOString()
   };
 }
 
@@ -441,12 +471,13 @@ els.saveBtn.addEventListener('click', async () => {
   els.saveBtn.disabled = true;
   els.saveBtn.textContent = 'Saving…';
   try {
-    await Api.saveScan({
+    const res = await Api.saveScan({
       label: `Scan — ${new Date().toLocaleString()}`,
       ...lastResult,
       thumbnail: makeThumbnail(els.previewImg)
     });
-    els.saveBtn.textContent = 'Saved ✓';
+    // Offline: kept in IndexedDB and uploaded automatically when back online.
+    els.saveBtn.textContent = res && res.queued ? 'Saved offline ✓' : 'Saved ✓';
   } catch (err) {
     els.saveBtn.textContent = 'Save failed';
     els.saveError.textContent = err.message;

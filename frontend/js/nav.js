@@ -133,6 +133,26 @@
 // Register the service worker so Mien can be installed on the home screen.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+
+  // Offline scans are uploaded by the service worker (Background Sync). As a
+  // backup, ask it to flush whenever the page opens or the connection returns.
+  const flushQueue = () =>
+    navigator.serviceWorker.ready.then((reg) => reg.active && reg.active.postMessage({ type: 'flush' })).catch(() => {});
+  window.addEventListener('online', flushQueue);
+  window.addEventListener('load', () => { if (navigator.onLine) flushQueue(); });
+
+  function toast(text) {
+    const t = document.createElement('div');
+    t.className = 'mien-toast';
+    t.textContent = text;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 4200);
+  }
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    const d = e.data || {};
+    if (d.type === 'mien-sync' && d.sent) toast(`Synced ${d.sent} offline scan${d.sent === 1 ? '' : 's'} ✓`);
+  });
 }
 
 // ---------- desktop + general polish (all display-only) ----------

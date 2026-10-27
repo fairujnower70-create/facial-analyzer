@@ -90,3 +90,43 @@ function renderSymmetryTrend(el, scans) {
     </svg>
     <p class="chart-note">Latest <b>${last}/100</b> · ${diff >= 0 ? '+' : ''}${diff} since first of these ${pts.length}</p>`;
 }
+
+// ---------- hidden developer panel (telemetry export for research) ----------
+// Open with /dashboard.html?dev=1, or triple-click the "Insights" heading.
+(function () {
+  function show() {
+    if (document.getElementById('dev-panel') || typeof MienTelemetry === 'undefined') return;
+    const st = MienTelemetry.stats();
+    const f = (v, u) => (v == null ? '—' : v + (u || ''));
+    const panel = document.createElement('section');
+    panel.id = 'dev-panel';
+    panel.className = 'dev-panel';
+    panel.innerHTML = `
+      <h3>Developer telemetry</h3>
+      <div class="dev-stats">
+        <div><b>${st.n}</b>scans logged</div>
+        <div><b>${f(st.initMean, ' ms')}</b>model init (avg)</div>
+        <div><b>${f(st.inferenceMedian, ' ms')}</b>inference median</div>
+        <div><b>${f(st.inferenceP95, ' ms')}</b>inference p95</div>
+        <div><b>${f(st.heapMean, ' MB')}</b>JS heap (avg)</div>
+        <div><b>${f(st.heapMax, ' MB')}</b>JS heap (max)</div>
+      </div>
+      <button class="btn btn-primary" id="dev-export">Export CSV</button>
+      <button class="btn btn-ghost" id="dev-clear">Clear log</button>
+      <p class="field-hint" style="margin-top:10px;">Stored only on this device. Heap figures need a Chromium browser.</p>`;
+    const anchor = document.getElementById('chart-emotions');
+    const section = anchor ? anchor.closest('section') : null;
+    const host = (section && section.parentElement && section.parentElement.parentElement) || document.querySelector('main');
+    host.insertBefore(panel, host.firstChild);
+    document.getElementById('dev-export').onclick = () => MienTelemetry.download();
+    document.getElementById('dev-clear').onclick = () => {
+      if (confirm('Delete all telemetry rows on this device?')) { MienTelemetry.clear(); panel.remove(); show(); }
+    };
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    if (/[?&]dev=1/.test(location.search)) show();
+    document.querySelectorAll('h2').forEach((h) => {
+      if (h.textContent.trim() === 'Insights') h.addEventListener('click', (e) => { if (e.detail === 3) show(); });
+    });
+  });
+})();

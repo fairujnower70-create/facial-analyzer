@@ -67,6 +67,11 @@ async function init() {
   `);
 
   await pool.query('ALTER TABLE scans ADD COLUMN IF NOT EXISTS face_shape_scores TEXT');
+  // client_id makes retries from the offline queue idempotent (no duplicates).
+  await pool.query('ALTER TABLE scans ADD COLUMN IF NOT EXISTS client_id TEXT');
+  await pool.query(
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_scans_client ON scans (user_id, client_id) WHERE client_id IS NOT NULL'
+  );
   await pool.query('CREATE INDEX IF NOT EXISTS idx_scans_user_created ON scans (user_id, created_at DESC)');
 
   // "Forgot password" requests. There is no email service, so a request just

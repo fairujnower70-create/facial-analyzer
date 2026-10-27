@@ -45,6 +45,11 @@ app.get('/.well-known/assetlinks.json', (req, res) => {
     if (err && !res.headersSent) res.status(404).json({ error: 'Not found' });
   });
 });
+// AI model weights and the face-api bundle never change between deploys, so
+// browsers may keep them for a long time (the service worker caches them too).
+const LONG_CACHE = { maxAge: '30d', immutable: true };
+app.use('/models', express.static(path.join(FRONTEND_DIR, 'models'), LONG_CACHE));
+app.use('/vendor', express.static(path.join(FRONTEND_DIR, 'vendor'), LONG_CACHE));
 app.use(express.static(FRONTEND_DIR));
 
 // Fallback to index.html for the root
