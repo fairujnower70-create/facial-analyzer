@@ -442,76 +442,87 @@
   // ---------------------------------------------------- derived expressions
   // face-api's expression net only knows 7 classes (neutral, happy, sad, angry,
   // fearful, disgusted, surprised). funny / excited / shy / contempt are NOT
-  // model outputs: they are heuristics that combine those 7 probabilities with
-  // landmark geometry (mouth opening, eye openness, brow height, lip-corner
-  // asymmetry, head pose). Treat them as playful estimates.
+  // model outputs: they are heuristics that read landmark geometry (mouth
+  // opening, eye openness, brow height, lip-corner asymmetry, head pose) and
+  // are gated by the 7 native probabilities. They are tuned to be decisive:
+  // a clear example of the mood scores high instead of a timid 30-40%.
   const EXTRA_EXPRESSIONS = ['funny', 'excited', 'shy', 'contempt'];
 
   function deriveExtraExpressions(native, positions, pose) {
-    const P = (i) => positions[i];
     if (!positions || positions.length < 68 || !positions.every(isPt)) return null;
-    const roll = pose && Number.isFinite(pose.roll) ? pose.roll : 0;
-    // de-roll around the nose tip so "vertical" measurements mean vertical
-    const a = (roll * Math.PI) / 180; // model roll is CCW-positive on screen
-    const ca = Math.cos(a), sa = Math.sin(a);
-    const n0 = P(30);
-    const pts = positions.map((p) => {
+    const P = positions;
+    // Roll straight from the eye line (robust, no pose solver needed) and
+    // de-rotate so "vertical" measurements stay vertical when the head tilts.
+    const roll = Math.atan2(P[45].y - P[36].y, P[45].x - P[36].x); // image space, y down
+    const ca = Math.cos(-roll), sa = Math.sin(-roll);
+    const n0 = P[30];
+    const pts = P.map((p) => {
       const dx = p.x - n0.x, dy = p.y - n0.y;
-      // rotate by +a in image space (y down) to cancel a CCW roll of a
       return { x: dx * ca - dy * sa, y: dx * sa + dy * ca };
     });
     const io = dist(pts[36], pts[45]);
     const mouthW = dist(pts[48], pts[54]);
     if (!(io > 4) || !(mouthW > 2)) return null;
 
-    const ear = (a0, a1, a2, a3, a4, a5) =>
+    const earOf = (a0, a1, a2, a3, a4, a5) =>
       (dist(pts[a1], pts[a5]) + dist(pts[a2], pts[a4])) / (2 * Math.max(1e-6, dist(pts[a0], pts[a3])));
-    const EAR = (ear(36, 37, 38, 39, 40, 41) + ear(42, 43, 44, 45, 46, 47)) / 2;
+    const EAR = (earOf(36, 37, 38, 39, 40, 41) + earOf(42, 43, 44, 45, 46, 47)) / 2;
     const mouthOpen = dist(pts[62], pts[66]) / mouthW;
     const eyeMidY = (pts[37].y + pts[38].y + pts[43].y + pts[44].y) / 4;
     const browY = (pts[19].y + pts[24].y) / 2;
-    const browRaise = (eyeMidY - browY) / io; // bigger = brows further above the eyes
+    const browRaise = (eyeMidY - browY) / io;
     const lipMidY = (pts[51].y + pts[57].y) / 2;
-    const asym = Math.abs((pts[48].y - lipMidY) - (pts[54].y - lipMidY)) / mouthW;
+    // how far each mouth corner sits above/below the lip centre line
+    const cornerL = (lipMidY - pts[48].y) / mouthW;
+    const cornerR = (lipMidY - pts[54].y) / mouthW;
+    const asym = Math.abs(cornerL - cornerR);
 
     const g = (k) => native[k] || 0;
     const happy = g('happy'), surprised = g('surprised'), neutral = g('neutral');
-    const negative = g('angry') + g('disgusted') + g('fearful') + g('sad') * 0.5;
+    const negative = g('fearful') + g('sad') * 0.5;
 
-    // Big grin + open mouth + squinted eyes = laughing
-    const funny = happy * (0.5 * smooth(mouthOpen, 0.15, 0.5) + 0.5 * smooth(0.28 - EAR, 0, 0.09));
-    // Happy/surprised with wide eyes, lifted brows and an open mouth
-    const excited =
-      Math.max(happy, surprised) *
-      (0.4 * smooth(EAR, 0.3, 0.42) + 0.3 * smooth(browRaise, 0.33, 0.5) + 0.3 * smooth(mouthOpen, 0.1, 0.4));
-    // Calm face, head dipped / tilted / turned, soft smile
-    const pitchDown = pose && pose.reliable ? Math.max(0, pose.pitch) : 0;
-    const tilt = pose ? Math.abs(pose.roll) : 0;
+    // FUNNY: laughing — a real smile with an open mouth and/or squinting eyes
+    const laugh = smooth(happy, 0.35, 0.8);
+    const funny = laugh * clamp01(0.7 * smooth(mouthOpen, 0.1, 0.38) + 0.45 * smooth(0.27 - EAR, -0.01, 0.07));
+
+    // EXCITED: lively — happy or surprised, with wide eyes, lifted brows, open mouth
+    const lively = smooth(Math.max(happy, surprised), 0.3, 0.75);
+    const excited = lively * clamp01(0.4 * smooth(EAR, 0.28, 0.38) + 0.3 * smooth(browRaise, 0.3, 0.46) + 0.55 * smooth(mouthOpen, 0.08, 0.28));
+
+    // SHY: calm face, head dipped / tilted / turned away, optional soft smile
+    // The generic head model reads ~10-16 degrees of 'down' on an ordinary
+    // frontal face, so only the part beyond that counts as a dipped head.
+    const pitchDown = pose && pose.reliable ? Math.max(0, pose.pitch - 13) : 0;
+    const tilt = Math.abs(roll * 180 / Math.PI);
     const turn = pose ? Math.abs(pose.yaw) : 0;
-    const softSmile = happy < 0.85 ? happy : 0;
-    const shy =
-      clamp01(1 - negative - surprised) *
-      (0.4 * smooth(pitchDown, 4, 16) + 0.25 * smooth(tilt, 3, 12) + 0.15 * smooth(turn, 8, 25) + 0.2 * smooth(softSmile, 0.08, 0.5));
-    // One mouth corner lifted more than the other on an otherwise flat face
-    const contempt = smooth(asym, 0.07, 0.2) * clamp01(0.6 * neutral + g('disgusted') + 0.6 * g('angry') + 0.4 * happy);
+    const softSmile = happy < 0.9 ? happy : 0;
+    const calm = clamp01(1 - negative - surprised - g('angry') - g('disgusted'));
+    const shy = calm * clamp01(0.45 * smooth(pitchDown, 2, 10) + 0.35 * smooth(tilt, 2, 9) + 0.3 * smooth(turn, 5, 18) + 0.25 * smooth(softSmile, 0.05, 0.4));
+
+    // CONTEMPT: one lip corner lifted/lowered more than the other (a smirk)
+    const smirk = smooth(asym, 0.055, 0.13);
+    const contempt = smirk * clamp01(0.4 + neutral + g('disgusted') + g('angry') + 0.6 * happy - surprised);
 
     const r3 = (v) => Math.round(clamp01(v) * 1000) / 1000;
     return { funny: r3(funny), excited: r3(excited), shy: r3(shy), contempt: r3(contempt) };
   }
 
-  // Native probabilities stay exactly as the model produced them. A derived
-  // mood can only become the "dominant" one if its (discounted) score beats
-  // the strongest native expression.
+  // The 7 native probabilities stay exactly as the model produced them. A
+  // derived mood becomes the dominant one when it is clearly present (score
+  // >= 0.5) and not dwarfed by the strongest native expression.
+  const DERIVED_MIN = 0.45;
+  const DERIVED_VS_NATIVE = 0.6;
   function pickDominant(native, extra) {
     let best = null;
     Object.entries(native).forEach(([k, v]) => {
       if (!best || v > best.v) best = { k, v };
     });
     if (extra) {
+      let top = null;
       Object.entries(extra).forEach(([k, v]) => {
-        const s = v * CFG.DERIVED_DISCOUNT;
-        if (s > best.v) best = { k, v: s };
+        if (v >= DERIVED_MIN && v >= DERIVED_VS_NATIVE * best.v && (!top || v > top.v)) top = { k, v };
       });
+      if (top) best = top;
     }
     return best.k;
   }
