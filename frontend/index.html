@@ -4,9 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Mien — Precision Facial Expression &amp; Emotion Analysis</title>
+<meta name="description" content="Mien reads 11 expressions, estimated age and gender, face shape and symmetry from a photo, your camera or a whole group, analysed on your own device." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/home.css" />
 <link rel="manifest" href="/manifest.webmanifest" />
 <meta name="theme-color" content="#0f172a" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -16,8 +18,11 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 <link rel="icon" type="image/png" href="/icons/icon-192.png" />
 <script src="/js/theme.js"></script>
+<script>document.documentElement.classList.add("hjs")</script>
 </head>
 <body>
+<div class="hm-progress" aria-hidden="true"></div>
+<div class="hm-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <nav class="nav">
   <div class="nav-inner">
@@ -31,20 +36,25 @@
   </div>
 </nav>
 
-<header class="wrap" style="padding:96px 24px 64px; display:flex; align-items:center; gap:56px; flex-wrap:wrap;">
-  <div style="flex:1; min-width:min(320px,100%);">
-    <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:20px; border:1px solid var(--border-strong); font-size:12.5px; color:var(--neon); margin-bottom:18px;">
-      <span style="width:6px; height:6px; border-radius:50%; background:var(--neon); box-shadow:0 0 8px var(--neon-glow); display:inline-block;"></span>
-      On-device analysis · nothing uploaded until you say so
-    </div>
-    <h1 style="font-size:44px; line-height:1.12; max-width:560px;">Read what a face is already saying.</h1>
-    <p style="font-family:var(--font-display); font-size:15px; color:var(--neon); letter-spacing:0.02em; margin-bottom:14px;">Precision Facial Expression &amp; Emotion Analysis</p>
-    <p style="font-size:17px; max-width:480px;">Mien scans a photo or your camera in seconds and returns age, expression, symmetry, and face-shape estimates — processed in your browser, never uploaded until you choose to save it.</p>
-    <div class="row gap-12" style="margin-top:28px;">
-      <a href="/signup.html" class="btn btn-primary">Create free account</a>
+<header class="hm-hero wrap">
+  <div class="hm-hero-text">
+    <div class="hm-badge reveal"><b></b>On-device AI · your photo stays on your phone</div>
+    <h1 class="hm-title reveal" data-rd=".08">Read what a face is <span class="hm-grad">already saying.</span></h1>
+    <p class="hm-kicker reveal" data-rd=".14">Precision Facial Expression &amp; Emotion Analysis</p>
+    <p class="hm-lead reveal" data-rd=".2">Scan a photo, your live camera or a whole group in seconds. Mien returns 11 expression scores, estimated age and gender, face shape with percentages, and a symmetry score. It is analysed on your own device, works offline, and saves only when you choose.</p>
+    <p class="hm-rotate reveal" data-rd=".26">Discover your <span class="rw" data-words="expression|face shape|symmetry|estimated age|whole friend group"></span><span class="caret"></span></p>
+    <div class="hm-cta reveal" data-rd=".32">
+      <a href="/signup.html" class="btn btn-primary btn-glow">Create free account</a>
       <a href="/index.html#how-it-works" class="btn btn-ghost">See how it works</a>
     </div>
+    <div class="hm-trust reveal" data-rd=".4"><span>Free to use</span><span>Works offline</span><span>Installs like an app</span></div>
   </div>
+  <div class="hm-visual reveal from-right" data-rd=".15">
+    <div class="hm-tilt">
+      <span class="hm-chip c1"><i></i><span><span data-t>Happy </span><small>92%</small></span></span>
+      <span class="hm-chip c2"><i></i>Oval <small>61%</small></span>
+      <span class="hm-chip c3"><i></i>Symmetry <small>88/100</small></span>
+      <span class="hm-chip c4"><i></i>Age <small>~24</small></span>
   <div class="scan-visual">
     <div class="scan-dots"></div>
     <div class="scan-ring-outer"></div>
@@ -147,72 +157,166 @@
       <div class="scan-progress"><div class="scan-progress-fill"></div></div>
     </div>
   </div>
+    </div>
+  </div>
 </header>
 
-<section id="how-it-works" class="wrap" style="padding:56px 24px;">
-  <h2 style="font-size:26px; margin-bottom:8px;">Three steps, no waiting room</h2>
-  <p style="max-width:520px; margin-bottom:36px;">Everything from capture to result lives on one screen.</p>
-  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:18px;">
-    <div class="card">
-      <h3 style="font-size:16px;">1. Capture</h3>
-      <p style="font-size:14.5px;">Use your webcam or upload a clear, front-facing photo.</p>
-    </div>
-    <div class="card">
-      <h3 style="font-size:16px;">2. Scan</h3>
-      <p style="font-size:14.5px;">The neon ring spins while landmarks, expression, and shape are computed.</p>
-    </div>
-    <div class="card">
-      <h3 style="font-size:16px;">3. Review</h3>
-      <p style="font-size:14.5px;">Get a readable breakdown, and save it to your history if you want to track changes.</p>
-    </div>
+<section class="hm-stats wrap">
+  <div class="hm-stat reveal"><b data-count="11">0</b><span>expression scores</span></div>
+  <div class="hm-stat reveal" data-rd=".08"><b data-count="68">0</b><span>facial landmarks</span></div>
+  <div class="hm-stat reveal" data-rd=".16"><b data-count="4">0</b><span>face shapes, each with a %</span></div>
+  <div class="hm-stat reveal" data-rd=".24"><b data-count="100" data-suffix="%">0</b><span>analysed on your device</span></div>
+</section>
+
+<div class="hm-marquee" aria-label="The eleven expressions Mien scores">
+  <div class="hm-track" id="hm-track"></div>
+</div>
+
+<section id="how-it-works" class="hm-sec wrap">
+  <div class="hm-eyebrow reveal">How it works</div>
+  <h2 class="hm-h2 reveal" data-rd=".06">Four steps, no waiting room</h2>
+  <p class="hm-sub reveal" data-rd=".12">From capture to a saved result in about a minute, on one screen.</p>
+  <div class="hm-steps reveal">
+    <div class="card hm-step"><div class="num">1</div><h3>Capture</h3><p>Open your camera in a selfie-style mirror view, or upload a clear photo. Have a group? Drop in the whole photo.</p><ul><li>Live camera</li><li>Photo upload</li><li>Group photo</li></ul></div>
+    <div class="card hm-step"><div class="num">2</div><h3>Scan</h3><p>The neon ring spins while 68 landmarks, expressions, age and face shape are worked out right on your device.</p><ul><li>On-device AI</li><li>No upload</li></ul></div>
+    <div class="card hm-step"><div class="num">3</div><h3>Review</h3><p>See 11 expression scores, estimated age and gender, face shape percentages and a symmetry score, each face on its own card.</p><ul><li>11 expressions</li><li>Face shape %</li><li>Symmetry</li></ul></div>
+    <div class="card hm-step"><div class="num">4</div><h3>Save &amp; track</h3><p>Save one scan or all faces at once. Watch your mood and symmetry change over time in your dashboard and journal.</p><ul><li>History</li><li>Dashboard</li><li>Mood journal</li></ul></div>
   </div>
 </section>
 
-<section id="features" class="wrap" style="padding:56px 24px;">
-  <h2 style="font-size:26px; margin-bottom:8px;">What Mien estimates</h2>
-  <p style="max-width:520px; margin-bottom:36px;">Estimates, not diagnoses — Mien is for curiosity and creative use, not medical or legal decisions.</p>
-  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px;">
-    <div class="card">
-      <h3 style="font-size:15.5px;">Age &amp; gender estimate</h3>
-      <p style="font-size:14px;">An approximate age range and gender confidence score.</p>
+<section id="features" class="hm-sec wrap">
+  <div class="hm-eyebrow reveal">Features</div>
+  <h2 class="hm-h2 reveal" data-rd=".06">Everything Mien estimates, and more</h2>
+  <p class="hm-sub reveal" data-rd=".12">Estimates, not diagnoses. Mien is for curiosity, self-insight and creative use, not medical or legal decisions.</p>
+  <div class="hm-bento">
+
+    <div class="card w4 reveal">
+      <span class="hm-tag">Example result</span>
+      <div class="hm-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></div>
+      <h3>11 expressions in one scan</h3>
+      <p>Seven come from a trained model (happy, sad, angry, surprised, neutral, fearful, disgusted). Four playful extras (funny, excited, shy, contempt) are estimated from facial geometry.</p>
+      <div class="hm-bars">
+        <div class="hm-bar"><span>Happy</span><div><i style="--w:86%;--bc:#10b981;--bd:.3s"></i></div><b>86%</b></div>
+        <div class="hm-bar"><span>Funny</span><div><i style="--w:62%;--bc:#22d3ee;--bd:.45s"></i></div><b>62%</b></div>
+        <div class="hm-bar"><span>Excited</span><div><i style="--w:41%;--bc:#e879f9;--bd:.6s"></i></div><b>41%</b></div>
+        <div class="hm-bar"><span>Shy</span><div><i style="--w:18%;--bc:#f9a8d4;--bd:.75s"></i></div><b>18%</b></div>
+      </div>
     </div>
-    <div class="card">
-      <h3 style="font-size:15.5px;">Dominant expression</h3>
-      <p style="font-size:14px;">Eleven expression scores: happy, neutral, surprised, funny, excited, shy, contempt and more.</p>
+
+    <div class="card w2 reveal" data-rd=".08">
+      <span class="hm-tag">Group scan</span>
+      <div class="hm-ico"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 19c0-3.3 2.7-6 6-6s6 2.7 6 6M15 19c0-2.4 1.6-4.4 4-4.9"/></svg></div>
+      <h3>Scan every face</h3>
+      <p>One group photo, one result per person. Then save all of them to history with their own thumbnails.</p>
+      <div class="hm-faces">
+        <div class="hm-face" data-n="1" style="--fc:#8b5cf6;--fd:0s"></div>
+        <div class="hm-face" data-n="2" style="--fc:#22d3ee;--fd:.5s"></div>
+        <div class="hm-face" data-n="3" style="--fc:#f59e0b;--fd:1s"></div>
+        <div class="hm-face" data-n="4" style="--fc:#ec4899;--fd:1.5s"></div>
+      </div>
     </div>
-    <div class="card">
-      <h3 style="font-size:15.5px;">Face shape</h3>
-      <p style="font-size:14px;">Oval, round, square, heart, or long, from 68-point landmarks.</p>
+
+    <div class="card w2 reveal">
+      <span class="hm-tag">Face shape</span>
+      <div class="hm-ico"><svg viewBox="0 0 24 24"><path d="M12 3c4 0 6.5 3 6.5 7.5 0 4.7-3 9.5-6.5 10.5C8.500 20 5.500 15.200 5.500 10.500 5.500 6 8 3 12 3z"/></svg></div>
+      <h3>Shape, in percentages</h3>
+      <p>Oval, Round, Square and Heart, each with its own percentage, not just one label.</p>
+      <div class="hm-shapes">
+        <div class="hm-shape" style="--sc:#8b5cf6"><svg viewBox="0 0 100 100"><ellipse cx="50" cy="52" rx="28" ry="40"/></svg><b>58%</b>Oval</div>
+        <div class="hm-shape" style="--sc:#22d3ee"><svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="35"/></svg><b>24%</b>Round</div>
+        <div class="hm-shape" style="--sc:#f59e0b"><svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="64" rx="14"/></svg><b>12%</b>Square</div>
+        <div class="hm-shape" style="--sc:#ec4899"><svg viewBox="0 0 100 100"><path d="M50 90C14 66 14 26 36 26c9 0 14 8 14 8s5-8 14-8c22 0 22 40-14 64z"/></svg><b>6%</b>Heart</div>
+      </div>
     </div>
-    <div class="card">
-      <h3 style="font-size:15.5px;">Symmetry score</h3>
-      <p style="font-size:14px;">A left/right balance score based on landmark geometry.</p>
+
+    <div class="card w2 reveal" data-rd=".08">
+      <span class="hm-tag">Symmetry</span>
+      <div class="hm-ico"><svg viewBox="0 0 24 24"><path d="M12 3v18M7 7l-4 5 4 5M17 7l4 5-4 5"/></svg></div>
+      <h3>Symmetry score</h3>
+      <p>How balanced the left and right sides of the face are, measured from landmark geometry.</p>
+      <div class="hm-ring"><svg viewBox="0 0 100 100"><defs><linearGradient id="hmSym" x1="0" x2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs><circle class="bg" cx="50" cy="50" r="40"/><circle class="fg" cx="50" cy="50" r="40"/></svg><span>88</span></div>
     </div>
-    <div class="card">
-      <h3 style="font-size:15.5px;">Scan history</h3>
-      <p style="font-size:14px;">Every saved scan is timestamped in your private dashboard.</p>
+
+    <div class="card w2 reveal" data-rd=".16">
+      <span class="hm-tag">Age &amp; gender</span>
+      <div class="hm-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.600 8 8"/></svg></div>
+      <h3>Age &amp; gender estimate</h3>
+      <p>An approximate age and a gender confidence score for every face, clearly labelled as an estimate.</p>
+      <div class="hm-bars" style="margin-top:auto">
+        <div class="hm-bar"><span>Age</span><div><i style="--w:38%;--bc:#8b5cf6"></i></div><b>~24</b></div>
+        <div class="hm-bar"><span>Gender</span><div><i style="--w:91%;--bc:#6366f1;--bd:.5s"></i></div><b>91%</b></div>
+      </div>
     </div>
-    <div class="card">
-      <h3 style="font-size:15.5px;">Private by default</h3>
-      <p style="font-size:14px;">Analysis runs client-side; only what you save reaches your account.</p>
+
+    <div class="card w3 reveal">
+      <span class="hm-tag">Dashboard &amp; journal</span>
+      <div class="hm-ico"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div>
+      <h3>Watch your mood over time</h3>
+      <p>Graphs for expression mix, symmetry trend and face shape mix, plus a daily mood journal with streaks.</p>
+      <svg class="hm-spark" viewBox="0 0 300 86" preserveAspectRatio="none"><defs><linearGradient id="hmLine" x1="0" x2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#ec4899"/></linearGradient><linearGradient id="hmArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b5cf6" stop-opacity=".35"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/></linearGradient></defs>
+        <path class="area" d="M0 62 C30 58 40 40 70 44 S120 60 150 36 S210 30 240 16 S285 20 300 10 L300 86 L0 86Z"/><path pathLength="1" d="M0 62 C30 58 40 40 70 44 S120 60 150 36 S210 30 240 16 S285 20 300 10"/></svg>
     </div>
+
+    <div class="card w3 reveal" data-rd=".08">
+      <span class="hm-tag">Offline</span>
+      <div class="hm-ico"><svg viewBox="0 0 24 24"><path d="M2 8.800a15 15 0 0120 0M5 12.500a10 10 0 0114 0M8.500 16a5 5 0 017 0M3 3l18 18"/><circle cx="12" cy="19.500" r="1"/></svg></div>
+      <h3>Works with no signal</h3>
+      <p>Scan offline and your results wait safely on your phone, then upload by themselves when you are back online.</p>
+      <div class="hm-sync"><span class="s1">● Offline: scan still works</span><span class="s2">◐ 3 scans waiting</span><span class="s3">✓ Synced 3 offline scans</span></div>
+    </div>
+
+    <div class="card w3 reveal">
+      <span class="hm-tag">Private by design</span>
+      <div class="hm-ico"><svg viewBox="0 0 24 24"><path d="M7 11V8a5 5 0 0110 0v3M5 11h14v10H5z"/></svg></div>
+      <h3>Your photo stays with you</h3>
+      <p>The AI models run in your browser and are bundled with the app. Only the numbers (and a small thumbnail) are stored, and only if you tap Save.</p>
+      <div class="hm-lock"><span class="pulse"></span>Photo analysed on this device. Nothing uploaded by default.</div>
+    </div>
+
+    <div class="card w3 reveal" data-rd=".08">
+      <span class="hm-tag">Install</span>
+      <div class="hm-ico"><svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg></div>
+      <h3>Install it like an app</h3>
+      <p>Add Mien to your home screen. It opens full-screen, loads fast, and uses a selfie-style mirrored camera so left and right feel natural.</p>
+      <div class="hm-phone"><i></i></div>
+    </div>
+
   </div>
 </section>
 
-<section class="wrap" style="padding:56px 24px 96px; text-align:center;">
-  <div class="panel" style="padding:48px 24px;">
-    <h2 style="font-size:26px;">Ready to see your first scan?</h2>
-    <p style="max-width:420px; margin:0 auto 24px;">It takes less than a minute to sign up and run an analysis.</p>
-    <a href="/signup.html" class="btn btn-primary">Create free account</a>
+<section class="hm-sec wrap" style="padding-top:8px">
+  <div class="hm-note reveal">
+    <svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.300 3.900L1.800 18a2 2 0 001.700 3h17a2 2 0 001.700-3L13.700 3.900a2 2 0 00-3.400 0z"/></svg>
+    <div><h3>Honest about what it is</h3><p>Seven expressions come from a trained model. Funny, excited, shy and contempt are playful estimates from facial geometry, and face shape and symmetry are ratio-based. Results are estimates for curiosity and creative use, never for medical, legal, hiring or identity decisions.</p></div>
+  </div>
+</section>
+
+<section class="hm-sec wrap" style="padding-top:8px">
+  <div class="hm-eyebrow reveal">Under the hood</div>
+  <h2 class="hm-h2 reveal" data-rd=".06">Built with modern web tech</h2>
+  <div class="hm-built reveal" data-rd=".12"><span>On-device face AI</span><span>68-point landmarks</span><span>Offline queue &amp; auto-sync</span><span>Installable PWA</span><span>Node.js &amp; Express</span><span>PostgreSQL</span><span>Admin analytics</span></div>
+</section>
+
+<section class="hm-sec wrap" style="padding-bottom:96px">
+  <div class="hm-cta-box reveal">
+    <h2>Ready to see your first scan?</h2>
+    <p>It takes less than a minute to sign up and run an analysis. Bring your friends for a group scan.</p>
+    <a href="/signup.html" class="btn btn-primary btn-glow">Create free account</a>
   </div>
 </section>
 
 <footer class="site-footer">
-  <p class="footer-disclaimer">Mien Facial Analyzer — a demo build. Not for medical, legal, or identification use.</p>
+  <p class="footer-disclaimer">Mien Facial Analyzer: a demo build. Estimates only. Not for medical, legal, or identification use.</p>
   <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
 </footer>
 
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
+<script>
+(function(){var L=[['Happy','#10b981',''],['Sad','#3b82f6',''],['Angry','#f43f5e',''],['Surprised','#f59e0b',''],['Neutral','#94a3b8',''],['Fearful','#a78bfa',''],['Disgusted','#84cc16',''],['Funny','#22d3ee','est.'],['Excited','#e879f9','est.'],['Shy','#f9a8d4','est.'],['Contempt','#14b8a6','est.']];
+var h=L.map(function(x){return '<span class="hm-pill"><i style="background:'+x[1]+'"></i>'+x[0]+(x[2]?'<em>'+x[2]+'</em>':'')+'</span>'}).join('');
+document.getElementById('hm-track').innerHTML=h+h;})();
+</script>
+<script src="js/home.js"></script>
 </body>
 </html>

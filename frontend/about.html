@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/home.css" />
 <link rel="manifest" href="/manifest.webmanifest" />
 <meta name="theme-color" content="#0f172a" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -16,6 +17,7 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 <link rel="icon" type="image/png" href="/icons/icon-192.png" />
 <script src="/js/theme.js"></script>
+<script>document.documentElement.classList.add("hjs")</script>
 </head>
 <body>
 
@@ -31,18 +33,29 @@
   </div>
 </nav>
 
-<main class="wrap" style="padding:64px 24px 96px; max-width:720px;">
-  <h1 style="font-size:30px;">About Mien</h1>
-  <p>Mien is a demo facial-analysis app. It detects a face in a photo or webcam frame, then estimates age, gender, expression, face shape, and left/right symmetry using on-device machine learning — nothing is sent to a server unless you choose to save a result.</p>
+<div class="hm-progress" aria-hidden="true"></div>
+<main class="wrap hm-about" style="padding:64px 24px 96px; max-width:760px;">
+  <div class="hm-eyebrow reveal">About</div>
+  <h1 style="font-size:clamp(30px,4.4vw,42px);" class="reveal" data-rd=".06">About <span class="hm-grad">Mien</span></h1>
+  <p class="reveal" data-rd=".1">Mien is a facial-analysis web app. It finds faces in a photo, a group picture or a live camera frame, then estimates 11 expression scores, age and gender, face shape (Oval, Round, Square or Heart, each with a percentage) and left/right symmetry. The analysis runs on your own device, so nothing is sent to a server unless you choose to save a result.</p>
 
-  <h2 style="font-size:19px; margin-top:32px;">How the analysis works</h2>
-  <p>Detection and landmarking run in your browser using a compact neural network. Age, gender, and expression come from that same model family. Face shape and symmetry are computed from the geometry of 68 facial landmark points using simple ratio-based heuristics.</p>
+  <h2 style="font-size:20px;" class="reveal">What you can do</h2>
+  <ul class="reveal">
+    <li>Scan one face or a whole group, with a separate result for every person.</li>
+    <li>Save a scan, or save every face in a group at once, each with its own thumbnail.</li>
+    <li>Follow your expression mix, symmetry trend and face shape mix on the dashboard, and keep a daily mood journal.</li>
+    <li>Keep scanning offline. Saved scans wait on your phone and upload automatically when you are back online.</li>
+    <li>Install Mien on your home screen and use the selfie-style mirrored camera.</li>
+  </ul>
 
-  <h2 style="font-size:19px; margin-top:32px;">What Mien is not</h2>
-  <p>Mien does not identify who someone is, and its outputs are statistical estimates, not facts. It isn't built or validated for medical, legal, hiring, law-enforcement, or any identity-verification use — please don't use it for those.</p>
+  <h2 style="font-size:20px;" class="reveal">How the analysis works</h2>
+  <p class="reveal">Face detection, 68-point landmarks, age, gender and seven expressions (happy, sad, angry, surprised, neutral, fearful, disgusted) come from compact pre-trained neural networks that are bundled with the app and run in your browser. Four extra scores (funny, excited, shy and contempt), the face shape percentages and the symmetry score are calculated by Mien from the geometry of the landmarks, using simple ratio-based rules. They are playful estimates, not model outputs, and they have not been validated on a labelled dataset.</p>
 
-  <h2 style="font-size:19px; margin-top:32px;">Your data</h2>
-  <p>Photos are processed locally in your browser. If you sign up and tap "Save to history," only the computed results (and, if the image is small enough, a thumbnail) are stored against your account so you can review them later.</p>
+  <h2 style="font-size:20px;" class="reveal">What Mien is not</h2>
+  <p class="reveal">Mien does not identify who someone is, and its results are statistical estimates, not facts. Facial expressions do not reliably show what a person feels inside. Mien isn't built or validated for medical, legal, hiring, law-enforcement or identity-verification use, so please don't use it for those.</p>
+
+  <h2 style="font-size:20px;" class="reveal">Your data</h2>
+  <p class="reveal">Photos are processed locally in your browser. If you sign up and tap "Save to history", only the computed results and a small thumbnail are stored against your account so you can review them later. You can delete any saved scan whenever you like. If you forget your password, you can request a reset PIN and an administrator can issue you a temporary password.</p>
 </main>
 
 <footer class="site-footer">
@@ -52,5 +65,6 @@
 
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/home.js"></script>
 </body>
 </html>
