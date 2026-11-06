@@ -11,10 +11,10 @@
    ============================================================ */
 
 :root {
-  --bg-void: #0f172a;       /* deep slate */
-  --bg-panel: #161c2e;
-  --bg-panel-raised: #1c2338;
-  --bg-input: #1e293b;      /* slate-800 */
+  --bg-void: #060912;       /* near-black navy */
+  --bg-panel: #0c1222;
+  --bg-panel-raised: #111a2e;
+  --bg-input: #131b2f;
   --navy-line: #1e293b;
   --border: rgba(148, 163, 184, 0.16);        /* slate-400 tinted */
   --border-strong: rgba(148, 163, 184, 0.34);
@@ -59,9 +59,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(99, 102, 241, 0.20), transparent 60%),
-    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(139, 92, 246, 0.12), transparent 55%),
-    radial-gradient(ellipse 600px 500px at 50% 100%, rgba(99, 102, 241, 0.08), transparent 60%),
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(99, 102, 241, 0.13), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(139, 92, 246, 0.08), transparent 55%),
+    radial-gradient(ellipse 600px 500px at 50% 100%, rgba(99, 102, 241, 0.05), transparent 60%),
     var(--bg-void);
   background-attachment: fixed;
   color: var(--text-primary);
@@ -1218,7 +1218,7 @@ main > *:nth-child(3) { animation-delay: 0.12s; }
 :root[data-theme="light"] body {
   background:
     radial-gradient(ellipse 900px 500px at 15% -10%, rgba(99, 102, 241, 0.16), transparent 60%),
-    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(139, 92, 246, 0.12), transparent 55%),
+    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(139, 92, 246, 0.08), transparent 55%),
     var(--bg-void);
   background-attachment: fixed;
 }
@@ -1361,7 +1361,7 @@ main > *:nth-child(3) { animation-delay: 0.12s; }
     position: relative;
     padding: 8px 10px 8px 20px;
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.6);
+    background: rgba(6, 9, 18, 0.62);
     backdrop-filter: blur(18px) saturate(1.5);
     -webkit-backdrop-filter: blur(18px) saturate(1.5);
     border: 1px solid var(--border);
@@ -1369,7 +1369,7 @@ main > *:nth-child(3) { animation-delay: 0.12s; }
     transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, padding 0.3s ease;
   }
   .nav.scrolled .nav-inner {
-    background: rgba(15, 23, 42, 0.84);
+    background: rgba(6, 9, 18, 0.88);
     border-color: rgba(139, 92, 246, 0.35);
     box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.75), 0 0 28px -10px rgba(139, 92, 246, 0.45);
     padding-top: 6px;
