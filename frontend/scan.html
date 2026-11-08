@@ -27,6 +27,8 @@
       <a href="/scan.html">Scan</a>
       <a href="/history.html">History</a>
       <a href="/journal.html">Journal</a>
+      <a href="/wrapped.html">Wrapped</a>
+      <a href="/kit.html">Bad day?</a>
     </div>
     <div class="nav-actions" id="nav-actions"></div>
   </div>
@@ -111,6 +113,12 @@
             <button class="btn btn-ghost" id="save-btn">Save to history</button>
           </div>
         </div>
+        <div id="feel-box" class="feel-box">
+          <div class="feel-q">How do you actually feel right now?</div>
+          <div id="feel-picker" class="feel-picker" role="radiogroup" aria-label="How do you feel"></div>
+          <input type="text" id="feel-note" class="feel-note" maxlength="200" placeholder="Optional: a short note to future you…" />
+          <p class="field-hint" style="margin:6px 0 0;">Mien saves what the camera saw next to what you said, then finds patterns in your Journal.</p>
+        </div>
         <div id="results-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px;"></div>
         <div id="expressions-list" style="margin-top:22px;"></div>
         <p class="field-hint" style="margin-top:20px;">
@@ -133,6 +141,7 @@
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/reference-data.js"></script>
+<script src="js/feelings.js"></script>
 <script src="/vendor/face-api.js"></script>
 <script>
   // Local copy first (works offline); CDN only if the local file is missing.

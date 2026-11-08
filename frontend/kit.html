@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bad Day Kit — Mien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Mien" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<script src="/js/theme.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/index.html" class="brand"><span class="brand-mark"></span>Mien</a>
+    <div class="nav-links">
+      <a href="/scan.html">Scan</a>
+      <a href="/history.html">History</a>
+      <a href="/journal.html">Journal</a>
+      <a href="/wrapped.html">Wrapped</a>
+      <a href="/kit.html">Bad day?</a>
+    </div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<main class="wrap" style="padding:44px 24px 96px;">
+  <div style="max-width:620px; margin:0 auto;">
+    <div class="center" style="margin-bottom:26px;">
+      <h1 style="font-size:28px;">Bad Day Kit</h1>
+      <p>Rough day? You don't have to fix anything. Just go through these three things.</p>
+    </div>
+
+    <div id="loading" class="skeleton-stack"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+
+    <div id="kit-body" style="display:none;">
+
+      <section class="panel kit-section">
+        <h2 class="kit-h">1. Your own words</h2>
+        <blockquote id="kit-quote" class="kit-quote"></blockquote>
+        <div id="kit-edit-wrap" style="display:none; margin-top:12px;">
+          <textarea id="kit-input" class="feel-note" maxlength="280" rows="2" placeholder="Write something kind to your future self…" style="width:100%; resize:vertical;"></textarea>
+          <div class="row gap-12" style="margin-top:8px; align-items:center;">
+            <button class="btn btn-primary" id="kit-save">Save note</button>
+            <button class="btn btn-ghost" id="kit-cancel">Cancel</button>
+            <span id="kit-msg" class="muted" style="font-size:12.5px;"></span>
+          </div>
+        </div>
+        <button class="btn btn-ghost" id="kit-edit" style="margin-top:12px;">Edit my note</button>
+      </section>
+
+      <section class="panel kit-section">
+        <h2 class="kit-h">2. Your happiest moments</h2>
+        <p class="muted" style="font-size:13px; margin:0 0 14px;">From your own scans. These really happened.</p>
+        <div id="kit-happy"></div>
+      </section>
+
+      <section class="panel kit-section center">
+        <h2 class="kit-h">3. One minute of breathing</h2>
+        <div class="breath-stage" id="breath-stage">
+          <div class="breath-orb" id="breath-orb"></div>
+          <div class="breath-text" id="breath-text">Ready?</div>
+        </div>
+        <div id="breath-timer" class="muted" style="font-size:13px; min-height:20px; margin-bottom:12px;"></div>
+        <button class="btn btn-primary" id="breath-btn">Start (1 minute)</button>
+      </section>
+
+      <p class="field-hint center" style="margin-top:18px;">If it feels like more than a bad day, please reach out to someone you trust or a local helpline. You deserve support.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <p class="footer-disclaimer">Estimates only — not a medical, biometric-identity, or legal tool.</p>
+  <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/reference-data.js"></script>
+<script src="js/results-render.js"></script>
+<script src="js/feelings.js"></script>
+<script src="js/kit.js"></script>
+</body>
+</html>

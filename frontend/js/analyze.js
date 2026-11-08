@@ -409,6 +409,7 @@ function buildResult(detection) {
     faceShapeScores: shapeMatch.scores,
     symmetryScore: estimateSymmetry(detection.landmarks),
     landmarksCount: positions.length,
+    eyeOpen: extra && extra._features ? extra._features.eyeOpen : null,
     clientId: OfflineQueue.uuid(),
     capturedAt: new Date().toISOString()
   };
@@ -433,6 +434,31 @@ function renderResults(r) {
   els.resultsPlaceholder.style.display = 'none';
   els.resultsContent.style.display = 'block';
   renderAnalysisCard(els.resultsGrid, els.expressionsList, r);
+  resetFeelPicker();
+}
+
+// ---------- Face vs Feeling picker ----------
+const feelPicker = document.getElementById('feel-picker');
+const feelNote = document.getElementById('feel-note');
+if (feelPicker && typeof FEELINGS !== 'undefined') {
+  feelPicker.innerHTML = FEELINGS.map((f) =>
+    `<button type="button" class="feel-opt" role="radio" aria-checked="false" data-feel="${f.id}"><span class="feel-emoji">${f.emoji}</span><span class="feel-label">${f.label}</span></button>`
+  ).join('');
+  feelPicker.addEventListener('click', (e) => {
+    const btn = e.target.closest('.feel-opt');
+    if (!btn || !lastResult) return;
+    const already = btn.classList.contains('on');
+    feelPicker.querySelectorAll('.feel-opt').forEach((b) => { b.classList.remove('on'); b.setAttribute('aria-checked', 'false'); });
+    if (already) { lastResult.selfFeeling = null; return; }
+    btn.classList.add('on');
+    btn.setAttribute('aria-checked', 'true');
+    lastResult.selfFeeling = btn.getAttribute('data-feel');
+  });
+}
+function resetFeelPicker() {
+  if (!feelPicker) return;
+  feelPicker.querySelectorAll('.feel-opt').forEach((b) => { b.classList.remove('on'); b.setAttribute('aria-checked', 'false'); });
+  if (feelNote) feelNote.value = '';
 }
 
 // ---------- save ----------
@@ -490,6 +516,7 @@ els.saveBtn.addEventListener('click', async () => {
     const res = await Api.saveScan({
       label: `Scan — ${new Date().toLocaleString()}`,
       ...lastResult,
+      note: feelNote ? feelNote.value.trim() : '',
       thumbnail: makeThumbnail(els.previewImg)
     });
     // Offline: kept in IndexedDB and uploaded automatically when back online.

@@ -25,7 +25,10 @@ router.post(
       landmarksCount,
       thumbnail,
       clientId,
-      capturedAt
+      capturedAt,
+      selfFeeling,
+      note,
+      eyeOpen
     } = req.body || {};
 
     if (age === undefined || !gender || !dominantExpression) {
@@ -42,11 +45,18 @@ router.post(
       if (!isNaN(t) && t.getTime() <= now + 5 * 60 * 1000 && t.getTime() > now - 90 * 24 * 3600 * 1000) takenAt = t.toISOString();
     }
 
+    // Face vs Feeling fields (all optional).
+    const FEELINGS = ['happy', 'okay', 'tired', 'sad', 'stressed', 'angry', 'anxious', 'excited'];
+    const feeling = typeof selfFeeling === 'string' && FEELINGS.includes(selfFeeling) ? selfFeeling : null;
+    const cleanNote = typeof note === 'string' && note.trim() ? note.trim().slice(0, 200) : null;
+    const eye = typeof eyeOpen === 'number' && isFinite(eyeOpen) && eyeOpen > 0 && eyeOpen < 1 ? eyeOpen : null;
+
     const result = await db.query(
       `INSERT INTO scans
         (user_id, label, age, gender, gender_probability, dominant_expression, expressions_json,
-         face_shape, face_shape_confidence, symmetry_score, landmarks_count, thumbnail, face_shape_scores, client_id, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, COALESCE($15::timestamptz, now()))
+         face_shape, face_shape_confidence, symmetry_score, landmarks_count, thumbnail, face_shape_scores, client_id, created_at,
+         self_feeling, note, eye_open)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, COALESCE($15::timestamptz, now()), $16, $17, $18)
        ON CONFLICT (user_id, client_id) WHERE client_id IS NOT NULL DO NOTHING
        RETURNING *`,
       [
@@ -64,7 +74,10 @@ router.post(
         thumbnail || null,
         faceShapeScores && typeof faceShapeScores === 'object' ? JSON.stringify(faceShapeScores) : null,
         cid,
-        takenAt
+        takenAt,
+        feeling,
+        cleanNote,
+        eye
       ]
     );
 

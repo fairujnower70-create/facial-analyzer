@@ -67,6 +67,13 @@ async function init() {
   `);
 
   await pool.query('ALTER TABLE scans ADD COLUMN IF NOT EXISTS face_shape_scores TEXT');
+  // Face vs Feeling: what the person said they felt, an optional short note,
+  // and the camera's eye-openness reading (used for the insights).
+  await pool.query('ALTER TABLE scans ADD COLUMN IF NOT EXISTS self_feeling TEXT');
+  await pool.query('ALTER TABLE scans ADD COLUMN IF NOT EXISTS note TEXT');
+  await pool.query('ALTER TABLE scans ADD COLUMN IF NOT EXISTS eye_open DOUBLE PRECISION');
+  // Bad Day Kit: the note you wrote to yourself.
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS kit_note TEXT');
   // client_id makes retries from the offline queue idempotent (no duplicates).
   await pool.query('ALTER TABLE scans ADD COLUMN IF NOT EXISTS client_id TEXT');
   await pool.query(

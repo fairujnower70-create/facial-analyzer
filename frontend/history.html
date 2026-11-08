@@ -27,6 +27,8 @@
       <a href="/scan.html">Scan</a>
       <a href="/history.html">History</a>
       <a href="/journal.html">Journal</a>
+      <a href="/wrapped.html">Wrapped</a>
+      <a href="/kit.html">Bad day?</a>
     </div>
     <div class="nav-actions" id="nav-actions"></div>
   </div>
@@ -92,6 +94,7 @@
 <script src="js/api.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/reference-data.js"></script>
+<script src="js/feelings.js"></script>
 <script src="js/results-render.js"></script>
 <script src="js/share-card.js"></script>
 <script>
@@ -203,6 +206,7 @@
           <div class="muted hc-date">${date}</div>
           <div class="hc-meta">
             ${emotionBadge(s.dominant_expression)}
+            ${s.self_feeling ? feelingBadge(s.self_feeling) : ''}
             <span class="muted">Age ~${Math.round(s.age)}</span>
             <span class="muted">${s.face_shape || '—'}</span>
           </div>

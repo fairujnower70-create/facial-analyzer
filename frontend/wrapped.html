@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Wrapped — Mien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Mien" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<script src="/js/theme.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/index.html" class="brand"><span class="brand-mark"></span>Mien</a>
+    <div class="nav-links">
+      <a href="/scan.html">Scan</a>
+      <a href="/history.html">History</a>
+      <a href="/journal.html">Journal</a>
+      <a href="/wrapped.html">Wrapped</a>
+      <a href="/kit.html">Bad day?</a>
+    </div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<main class="wrap" style="padding:44px 24px 96px;">
+  <div style="max-width:560px; margin:0 auto;">
+    <div class="center" style="margin-bottom:22px;">
+      <h1 style="font-size:28px;">Mien Wrapped</h1>
+      <p>Your month, on your face.</p>
+    </div>
+
+    <div class="row gap-12" style="justify-content:center; margin-bottom:22px; flex-wrap:wrap;" id="period-tabs">
+      <button class="btn btn-ghost mode-tab" data-p="week">This week</button>
+      <button class="btn btn-ghost mode-tab active" data-p="month">This month</button>
+      <button class="btn btn-ghost mode-tab" data-p="last">Last month</button>
+    </div>
+
+    <div id="loading" class="skeleton-stack"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+    <div id="empty" class="panel center" style="display:none; padding:34px 24px;">
+      <p id="empty-msg" style="margin-bottom:16px;">No saved scans in this period yet.</p>
+      <a href="/scan.html" class="btn btn-primary">Run a scan</a>
+    </div>
+
+    <div id="wrapped-body" style="display:none;">
+      <div id="wrapped-canvas-wrap" class="wrapped-canvas-wrap"></div>
+      <div class="row gap-12" style="justify-content:center; margin-top:18px;">
+        <button class="btn btn-primary" id="wrapped-share">Share card</button>
+      </div>
+      <p id="wrapped-note" class="field-hint center" style="margin-top:12px;"></p>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <p class="footer-disclaimer">Estimates only — not a medical, biometric-identity, or legal tool.</p>
+  <p class="footer-copyright">&copy; 2026 Facial Analyzer | Developed by <span class="footer-dev">Fairuj Nower</span></p>
+</footer>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/reference-data.js"></script>
+<script src="js/results-render.js"></script>
+<script src="js/feelings.js"></script>
+<script src="js/share-card.js"></script>
+<script src="js/wrapped.js"></script>
+</body>
+</html>
