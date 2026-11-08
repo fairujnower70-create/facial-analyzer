@@ -7,7 +7,7 @@
 //  * POST /api/scans while offline ... stored in IndexedDB, synced later
 try { importScripts('/js/offline-queue.js'); } catch (_) {}
 
-const V = 'v17';
+const V = 'v18';
 const STATIC = 'mien-static-' + V;
 const MODELS = 'mien-models-v1';
 const API = 'mien-api-' + V;
@@ -18,7 +18,7 @@ const SHELL = [
   '/js/vision-core.js', '/js/analyze.js', '/js/live-overlay.js', '/js/multi-face.js', '/js/share-card.js', '/js/feelings.js', '/js/story.js', '/js/kit.js', '/js/mood-agent.js',
   '/js/charts.js', '/js/home.js', '/css/home.css', '/about.html', '/js/telemetry.js', '/js/offline-queue.js', '/manifest.webmanifest', '/icons/icon-192.png'
 ];
-const CACHEABLE_API = ['/api/scans', '/api/auth/me'];
+const CACHEABLE_API = ['/api/scans']; // /api/auth/me has its own handler (authFirst)
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -49,11 +49,13 @@ self.addEventListener('fetch', (e) => {
   }
   if (req.method !== 'GET') {
     // other writes (delete scan, login, ...) go straight to the network; drop stale cached data after them
+    if (url.pathname.startsWith('/api/auth/')) authEpoch++; // login / logout: older in-flight /me answers are now stale
     if (url.pathname.startsWith('/api/') && url.pathname !== '/api/chat') e.waitUntil(caches.delete(API));
     return;
   }
   if (url.pathname.startsWith('/api/')) {
-    if (CACHEABLE_API.includes(url.pathname)) e.respondWith(networkFirst(req, e));
+    if (url.pathname === '/api/auth/me') e.respondWith(authFirst(req, e));
+    else if (CACHEABLE_API.includes(url.pathname)) e.respondWith(networkFirst(req, e));
     return; // admin & everything else: plain network
   }
   if (isModelAsset(url.pathname)) {
@@ -141,6 +143,24 @@ async function networkFirst(req, e) {
     const t = setTimeout(() => finish(cached), API_TIMEOUT_MS);
     net.then((r) => { clearTimeout(t); finish(r); }).catch(() => { clearTimeout(t); finish(cached); });
   });
+}
+
+// "Who am I?" must never be answered from a stale copy while the network works
+// (that is what kept the old logged-in buttons after logout, or bounced a fresh
+// login). The network always wins; the cached copy is used ONLY when the
+// request itself fails (offline), and is dropped as soon as the server says 401.
+let authEpoch = 0;
+async function authFirst(req, e) {
+  const epoch = authEpoch;
+  const cache = await caches.open(API);
+  try {
+    const res = await fetch(req, { cache: 'no-store' });
+    if (res.ok) { if (epoch === authEpoch) e.waitUntil(cache.put(req, res.clone())); }
+    else e.waitUntil(cache.delete(req));
+    return res;
+  } catch (_) {
+    return (await cache.match(req)) || offlineJson();
+  }
 }
 
 // ---------- offline scan queue ----------

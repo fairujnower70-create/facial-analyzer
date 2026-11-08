@@ -245,3 +245,8 @@ window.MIEN_BUILD = '2026-11-08.1';
   const p = document.querySelector('.footer-copyright');
   if (p) { const s = document.createElement('span'); s.style.cssText = 'opacity:.45;margin-left:8px;font-size:11px'; s.textContent = 'build ' + window.MIEN_BUILD; p.appendChild(s); }
 })();
+
+
+// Coming back to a page from the browser's back/forward cache would show the
+// old logged-in/out buttons; reload so the nav always matches the session.
+window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
