@@ -1561,3 +1561,7 @@ main > *:nth-child(3) { animation-delay: 0.12s; }
 .breath-prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #22d3ee, #8b5cf6); transition: width 1s linear; }
 @media (prefers-reduced-motion: reduce) { .breath-orb, .breath-prog i, .bt, .bt-emoji { transition: none; animation: none; opacity: 1; transform: none; } .breath-orb.in { transform: scale(1.2); } }
 @media (max-width: 860px) { .kt-grid { grid-template-columns: 1fr; } .kt-sticky { position: static; } }
+
+.kt-saved { display: inline-block; margin-top: 8px; font-size: 12.5px; color: #10b981; }
+.kt-saved.flash { animation: savedPop 1.6s ease; }
+@keyframes savedPop { 0% { transform: scale(.9); opacity: 0; } 15% { transform: scale(1.08); opacity: 1; background: rgba(16,185,129,.18); } 100% { transform: none; background: transparent; } }

@@ -49,6 +49,7 @@
         <div class="kt-top"><span class="kt-step">1</span><span class="bt-label" style="margin:0;">Your own words</span>
           <button class="kt-link" id="kit-edit" type="button">Edit</button></div>
         <blockquote id="kit-quote" class="kt-quote"></blockquote>
+        <div id="kit-saved" class="kt-saved" style="display:none;">✓ Saved to your account</div>
         <div id="kit-edit-wrap" style="display:none;">
           <textarea id="kit-input" class="feel-note" maxlength="280" rows="3" placeholder="Write something kind to your future self…" style="width:100%; resize:vertical; margin-top:0;"></textarea>
           <div class="kt-chips" id="kit-chips"></div>
@@ -61,9 +62,13 @@
       </section>
 
       <section class="kt-card">
-        <div class="kt-top"><span class="kt-step">2</span><span class="bt-label" style="margin:0;">Your happiest moments</span></div>
-        <p class="muted" style="font-size:13px; margin:10px 0 14px;">Pulled from your own scans. These really happened.</p>
-        <div id="kit-happy" class="kt-rail"></div>
+        <div class="kt-top"><span class="kt-step">2</span><span class="bt-label" style="margin:0;">Your happiest moments</span>
+          <button class="kt-link" id="happy-toggle" type="button">Hide</button></div>
+        <div id="happy-body">
+          <p class="muted" style="font-size:13px; margin:10px 0 14px;">Pulled from your own scans. These really happened.</p>
+          <div id="kit-happy" class="kt-rail"></div>
+        </div>
+        <p id="happy-hidden" class="muted" style="display:none; font-size:13.5px; margin:12px 0 0;">Hidden. Not everyone wants photos on a rough day, and that's fine. Show them whenever you feel ready.</p>
       </section>
     </div>
 

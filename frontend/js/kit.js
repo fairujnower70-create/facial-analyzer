@@ -28,6 +28,7 @@
     quote.textContent = `“${note || DEFAULT_NOTE}”`;
     quote.classList.toggle('kt-default', !note);
     editBtn.textContent = note ? 'Edit' : 'Write your own';
+    document.getElementById('kit-saved').style.display = note ? 'block' : 'none';
   }
   paintNote();
   const chips = document.getElementById('kit-chips');
@@ -46,6 +47,9 @@
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Could not save');
       note = data.note || ''; paintNote(); msg.textContent = ''; closeEdit();
+      const tag = document.getElementById('kit-saved');
+      tag.textContent = note ? '✓ Saved to your account' : '';
+      tag.classList.remove('flash'); void tag.offsetWidth; tag.classList.add('flash');
     } catch (e) { msg.textContent = e.message; }
   });
 
@@ -82,6 +86,24 @@
     lb.addEventListener('click', (e) => { if (e.target === lb || e.target.id === 'kt-lb-close') lb.style.display = 'none'; });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') lb.style.display = 'none'; });
   }
+
+  // ---- hide / show happy moments (remembered on this device) ----
+  const hideBtn = document.getElementById('happy-toggle');
+  const happyBody = document.getElementById('happy-body');
+  const happyHidden = document.getElementById('happy-hidden');
+  const HIDE_KEY = 'mien-kit-hide-happy';
+  const readHide = () => { try { return localStorage.getItem(HIDE_KEY) === '1'; } catch (_) { return false; } };
+  function paintHide(hidden) {
+    happyBody.style.display = hidden ? 'none' : '';
+    happyHidden.style.display = hidden ? 'block' : 'none';
+    hideBtn.textContent = hidden ? 'Show' : 'Hide';
+  }
+  paintHide(readHide());
+  hideBtn.addEventListener('click', () => {
+    const hidden = happyBody.style.display !== 'none';
+    try { localStorage.setItem(HIDE_KEY, hidden ? '1' : '0'); } catch (_) {}
+    paintHide(hidden);
+  });
 
   // ---- 3. breathing (5s in, 5s out, 6 rounds = 60s) ----
   const btn = document.getElementById('breath-btn');
