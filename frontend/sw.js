@@ -7,7 +7,7 @@
 //  * POST /api/scans while offline ... stored in IndexedDB, synced later
 try { importScripts('/js/offline-queue.js'); } catch (_) {}
 
-const V = 'v11';
+const V = 'v12';
 const STATIC = 'mien-static-' + V;
 const MODELS = 'mien-models-v1';
 const API = 'mien-api-' + V;
@@ -60,7 +60,7 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(cacheFirst(req));
     return;
   }
-  e.respondWith(staleWhileRevalidate(req, e));
+  e.respondWith(appNetworkFirst(req, e));
 });
 
 // ---------- strategies ----------
@@ -71,6 +71,30 @@ async function cacheFirst(req) {
   const res = await fetch(req);
   if (res.ok) cache.put(req, res.clone());
   return res;
+}
+
+// App code (pages, css, js) is network-first so a new deploy is never mixed with
+// stale cached files; the cache is only the offline fallback (4 s timeout).
+async function appNetworkFirst(req, e) {
+  const cache = await caches.open(STATIC);
+  const net = fetch(req).then((res) => {
+    if (res.ok && res.type === 'basic') cache.put(req, res.clone());
+    return res;
+  });
+  e.waitUntil(net.catch(() => {}));
+  const cached = await cache.match(req);
+  if (!cached) {
+    try { return await net; } catch (_) {
+      if (req.mode === 'navigate') return (await cache.match('/index.html')) || Response.error();
+      return Response.error();
+    }
+  }
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (r) => { if (!done) { done = true; resolve(r); } };
+    const t = setTimeout(() => finish(cached), 4000);
+    net.then((r) => { clearTimeout(t); finish(r); }).catch(() => { clearTimeout(t); finish(cached); });
+  });
 }
 
 async function staleWhileRevalidate(req, e) {
