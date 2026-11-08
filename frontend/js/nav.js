@@ -94,6 +94,13 @@
       document.body.classList.add('has-tabbar');
     }
 
+    // Kinesin, the tiny robot companion (signed-in pages only; self-contained).
+    if (!window.Kinesin && !document.querySelector('script[data-kinesin]')) {
+      const ks = document.createElement('script');
+      ks.src = '/js/kinesin.js'; ks.defer = true; ks.setAttribute('data-kinesin', '1');
+      document.body.appendChild(ks);
+    }
+
     // Best-effort — if this fails (e.g. offline), the nav just shows no badge.
     try {
       const { scans } = await Api.getScans();
