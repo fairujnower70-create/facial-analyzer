@@ -6,10 +6,10 @@
 // Nothing is stored on the server. He is a friendly companion, not a therapist.
 (function () {
   if (window.Kinesin) return;
-  console.log('Kinesin v2 loaded');
+  console.log('Kinesin v4 loaded');
 
   const LS = 'mien-kinesin';
-  let prefs = { muted: false, hidden: false };
+  let prefs = { muted: false, hidden: false, voiceName: null };
   try { Object.assign(prefs, JSON.parse(localStorage.getItem(LS) || '{}')); } catch (_) {}
   const savePrefs = () => { try { localStorage.setItem(LS, JSON.stringify(prefs)); } catch (_) {} };
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -139,8 +139,9 @@
     <div class="kin-cap" id="kin-cap" role="status" aria-live="polite"></div>
     <section class="kin-panel" id="kin-panel" role="dialog" aria-label="Kinesin the robot" hidden>
       <header class="kin-head">
-        <div><b>Kinesin 🤖</b><small>Tiny baby robot v2 · not a therapist</small></div>
+        <div><b>Kinesin 🤖</b><small>Tiny baby robot v4 · not a therapist</small></div>
         <div class="kin-ic">
+          <button type="button" class="kin-ib" id="kin-voice" title="Change voice" aria-label="Change Kinesin voice">🎙️</button>
           <button type="button" class="kin-ib" id="kin-mute" title="Voice on/off" aria-label="Voice on or off">🔊</button>
           <button type="button" class="kin-ib" id="kin-min" title="Tuck away" aria-label="Tuck Kinesin away">–</button>
           <button type="button" class="kin-ib" id="kin-x" title="Close" aria-label="Close">×</button>
@@ -223,16 +224,22 @@
   // ---------------------------------------------------------------- voice
   const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
   let voice = null;
-  // Prefer light, high voices; avoid deep male ones (the "adult" sound).
-  const LIGHT = /samantha|google us english|aria|jenny|zira|karen|tessa|moira|allison|ava|susan|female/i;
+  // Local (on-device) voices obey pitch; "Google" / "Natural" / online voices IGNORE
+  // pitch, so they can never sound like a baby. Rank local + light voices first.
+  const LIGHT = /samantha|aria|jenny|zira|karen|tessa|moira|allison|ava|susan|victoria|female/i;
   const HEAVY = /\bmale\b|david|mark|daniel|alex|fred|ralph|bruce|george|james|guy|ryan|eric|aaron|arthur|rishi/i;
-  function chooseVoice() {
-    if (!synth) return;
-    const vs = synth.getVoices();
-    if (!vs.length) return;
+  function voiceList() {
+    const vs = synth ? synth.getVoices() : [];
     const en = vs.filter((v) => /^en/i.test(v.lang));
     const pool = en.length ? en : vs;
-    voice = pool.find((v) => LIGHT.test(v.name) && !HEAVY.test(v.name)) || pool.find((v) => !HEAVY.test(v.name)) || pool[0];
+    const score = (v) => (v.localService ? 0 : 10) + (HEAVY.test(v.name) ? 20 : 0) + (LIGHT.test(v.name) ? 0 : 3) + (/google|natural|online/i.test(v.name) ? 5 : 0);
+    return pool.slice().sort((a, b) => score(a) - score(b));
+  }
+  function chooseVoice() {
+    if (!synth) return;
+    const l = voiceList();
+    if (!l.length) return;
+    voice = (prefs.voiceName && l.find((v) => v.name === prefs.voiceName)) || l[0];
   }
   if (synth) { chooseVoice(); synth.addEventListener && synth.addEventListener('voiceschanged', chooseVoice); }
 
@@ -242,14 +249,21 @@
     [/\blove\b/gi, 'wuv'], [/\bplease\b/gi, 'pwease'], [/\blittle\b/gi, 'widdle'], [/\bwith\b/gi, 'wiv'],
     [/\bthank you\b/gi, 'tank yoo'], [/\bsorry\b/gi, 'sowwy'], [/\bwhat\b/gi, 'wat'], [/\bthe\b/gi, 'da'],
     [/\bthis\b/gi, 'dis'], [/\bthat\b/gi, 'dat'], [/\bthere\b/gi, 'dere'], [/\bfriend\b/gi, 'fwend'],
-    [/\bhello\b/gi, 'hewwo'], [/\byou\b/gi, 'yoo'], [/\bsing\b/gi, 'sing-sing'], [/\bgood\b/gi, 'goodie']
+    [/\bhello\b/gi, 'hewwo'], [/\byou\b/gi, 'yoo'], [/\byour\b/gi, 'yoor'], [/\bgood\b/gi, 'goodie'],
+    [/\bhelp\b/gi, 'hewp'], [/\blook\b/gi, 'wook'], [/\blike\b/gi, 'wike'], [/\blet's\b/gi, 'wets'],
+    [/\bsmile\b/gi, 'smiwe'], [/\bsleep\b/gi, 'sweep'], [/\bsleepy\b/gi, 'sweepy'], [/\bwant\b/gi, 'wanna'],
+    [/\bmy\b/gi, 'mai'], [/\bI'm\b/g, 'Ai am'], [/\bhappy\b/gi, 'happeee'], [/\bsong\b/gi, 'songie']
   ];
   function cutify(text, soft) {
     let s = text.replace(EMOJI, ' ').replace(/\s+/g, ' ').trim();
     CUTE.forEach(([re, to]) => { s = s.replace(re, to); });
-    s = s.replace(/\br(?=[aeiou])/gi, (m) => (m === 'R' ? 'W' : 'w'));
-    if (!soft) s = s.replace(/([.!?])\s+/g, (m, p) => p + ' ' + (Math.random() < 0.3 ? pick(['Hehe!', 'Beep boop!', 'Eep!', 'Yay!']) + ' ' : ''));
+    s = s.replace(/r(?=[aeiou])/gi, (m) => (m === 'R' ? 'W' : 'w'));          // r -> w anywhere
+    s = s.replace(/\bl(?=[aeiou])/gi, (m) => (m === 'L' ? 'W' : 'w'));         // word-start l -> w
+    if (!soft) s = s.replace(/([.!?])\s+/g, (m, p) => p + ' ' + (Math.random() < 0.35 ? pick(['Hehe!', 'Beep boop!', 'Eeee!', 'Yay yay!', 'Giggle!']) + ' ' : ''));
     return s;
+  }
+  function giggle() {
+    for (let i = 0; i < 4; i++) tone(900 + Math.random() * 500 + i * 120, i * 0.075, 0.07, 'sine', 0.05);
   }
 
   // Speaks a line in Kinesin's baby-robot voice. Each short chunk gets a slightly
@@ -260,19 +274,22 @@
     const wait = Math.max(900, text.length * 62);
     if (!synth || prefs.muted) return sleep(wait).then(() => {});
     const spoken = opts.plain ? text.replace(EMOJI, ' ').replace(/\s+/g, ' ').trim() : cutify(text, opts.soft);
-    const parts = (spoken.match(/[^.!?,;]+[.!?,;]*/g) || [spoken]).map((p) => p.trim()).filter(Boolean);
+    const parts = opts.sing
+      ? [spoken.replace(/[.!?,;]/g, ' ').replace(/\s+/g, ' ').trim()].filter(Boolean)
+      : (spoken.match(/[^.!?,;]+[.!?,;]*/g) || [spoken]).map((p) => p.trim()).filter(Boolean);
     if (!parts.length) return Promise.resolve();
     return new Promise((resolve) => {
       let done = false, left = parts.length;
-      const fin = () => { if (!done) { done = true; resolve(); } };
+      const fin = () => { if (!done) { done = true; if (!opts.plain && !opts.soft && Math.random() < 0.3) giggle(); resolve(); } };
       try {
         parts.forEach((p) => {
           const u = new SpeechSynthesisUtterance(p);
           if (voice) { u.voice = voice; u.lang = voice.lang; }
           if (opts.plain) { u.pitch = opts.pitch || 1.1; u.rate = opts.rate || 0.9; }
+          else if (opts.sing) { u.pitch = 2; u.rate = opts.rate || 0.9; }
           else {
-            u.pitch = Math.min(2, (opts.pitch || 1.9) + 0.2 - Math.random() * 0.15);
-            u.rate = Math.max(0.5, (opts.rate || 1.05) * (0.95 + Math.random() * 0.14));
+            u.pitch = 2 - Math.random() * 0.08;                                    // browser max = 2
+            u.rate = Math.max(0.6, (opts.rate || 1.05) * 1.12 * (0.95 + Math.random() * 0.14)); // quick + squeaky
           }
           u.volume = 1;
           u.onend = u.onerror = () => { if (--left <= 0) fin(); };
@@ -291,7 +308,7 @@
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return null;
         actx = new AC();
-        master = actx.createGain(); master.gain.value = 0.5;
+        master = actx.createGain(); master.gain.value = 0.9;
         master.connect(actx.destination);
       }
       if (actx.state === 'suspended') actx.resume();
@@ -310,6 +327,12 @@
     o.start(t0); o.stop(t0 + dur + 0.05);
   }
   const note = (semi) => 261.63 * Math.pow(2, semi / 12); // semitones above middle C
+  // Clear music-box style note: bright sine + soft octave partial, with a pluck decay.
+  function bell(semi, start, beats) {
+    const f = note(semi), d = Math.max(0.3, beats * BEAT * 1.15);
+    tone(f, start, d, 'sine', 0.42);
+    tone(f * 2, start, d * 0.6, 'triangle', 0.1);
+  }
   function drum(kind) {
     const c = audio(); if (!c) return;
     const t0 = c.currentTime;
@@ -339,53 +362,112 @@
   }
 
   // ---------------------------------------------------------------- behaviours
-  // Notes are semitones above middle C. To add YOUR song: copy one entry, change
-  // title / keys (words that trigger it when typed, e.g. "sing twinkle") / lines.
+  // ---- SONGS ----------------------------------------------------------------
+  // Only traditional / public-domain songs plus original ones (famous modern songs
+  // are copyrighted, so their words and tunes are not included).
+  // A note is a number (semitones above middle C, 1 beat) or [semitones, beats].
+  // To add your OWN song: copy an entry, change title / keys / lines.
+  const BEAT = 0.42; // seconds per beat
   const SONGS = [
-    { title: 'Twinkle Twinkle', keys: /twinkle|star/i, lines: [
-      { words: 'Twinkle twinkle little star', n: [0, 0, 7, 7, 9, 9, 7] },
-      { words: 'How I wonder what you are', n: [5, 5, 4, 4, 2, 2, 0] },
-      { words: 'Up above the world so high', n: [7, 7, 5, 5, 4, 4, 2] },
-      { words: 'Like a diamond in the sky', n: [7, 7, 5, 5, 4, 4, 2] },
-      { words: 'Twinkle twinkle little star', n: [0, 0, 7, 7, 9, 9, 7] },
-      { words: 'How I wonder what you are', n: [5, 5, 4, 4, 2, 2, 0] }
+    { title: '⭐ Twinkle Twinkle Little Star', keys: /twinkle|little star/i, lines: [
+      { words: 'Twinkle twinkle little star', n: [0, 0, 7, 7, 9, 9, [7, 2]] },
+      { words: 'How I wonder what you are', n: [5, 5, 4, 4, 2, 2, [0, 2]] },
+      { words: 'Up above the world so high', n: [7, 7, 5, 5, 4, 4, [2, 2]] },
+      { words: 'Like a diamond in the sky', n: [7, 7, 5, 5, 4, 4, [2, 2]] },
+      { words: 'Twinkle twinkle little star', n: [0, 0, 7, 7, 9, 9, [7, 2]] },
+      { words: 'How I wonder what you are', n: [5, 5, 4, 4, 2, 2, [0, 2]] }
     ] },
-    { title: 'Row Row Row Your Boat', keys: /row|boat/i, lines: [
-      { words: 'Row row row your boat', n: [0, 0, 0, 2, 4] },
-      { words: 'Gently down the stream', n: [4, 2, 4, 5, 7] },
-      { words: 'Merrily merrily merrily merrily', n: [12, 12, 12, 7, 7, 7, 4, 4, 4, 0, 0, 0] },
-      { words: 'Life is but a dream', n: [7, 5, 4, 2, 0] }
+    { title: '🔤 The ABC Song', keys: /abc|alphabet/i, lines: [
+      { words: 'A B C D E F G', n: [0, 0, 7, 7, 9, 9, [7, 2]] },
+      { words: 'H I J K L M N O P', n: [5, 5, 4, 4, 2, 2, [0, 2]] },
+      { words: 'Q R S, T U V', n: [7, 7, 5, 5, 4, 4, [2, 2]] },
+      { words: 'W X, Y and Z', n: [7, 7, 5, 5, 4, 4, [2, 2]] },
+      { words: 'Now I know my A B Cs', n: [0, 0, 7, 7, 9, 9, [7, 2]] },
+      { words: "Next time won't you sing with me", n: [5, 5, 4, 4, 2, 2, [0, 2]] }
     ] },
-    { title: 'Mary Had a Little Lamb', keys: /mary|lamb/i, lines: [
-      { words: 'Mary had a little lamb', n: [4, 2, 0, 2, 4, 4, 4] },
-      { words: 'Little lamb, little lamb', n: [2, 2, 2, 4, 7, 7] },
-      { words: 'Mary had a little lamb', n: [4, 2, 0, 2, 4, 4, 4] },
-      { words: 'Its fleece was white as snow', n: [4, 2, 0, 2, 4, 4, 4, 4, 2, 2, 4, 2, 0] }
+    { title: '🎂 Happy Birthday', keys: /birthday|bday/i, lines: [
+      { words: 'Happy birthday to you', n: [[7, .75], [7, .25], 9, 7, 12, [11, 2]] },
+      { words: 'Happy birthday to you', n: [[7, .75], [7, .25], 9, 7, 14, [12, 2]] },
+      { words: 'Happy birthday dear friend', n: [[19, .75], [19, .25], 16, 12, 11, [9, 2]] },
+      { words: 'Happy birthday to you', n: [[17, .75], [17, .25], 16, 12, 14, [12, 2]] }
     ] },
-    { title: 'Sleepy Robot Lullaby', keys: /lullaby|sleep|sleepy|night/i, lines: [
-      { words: 'Sleepy robot, close your eyes', n: [4, 4, 7, 7, 9, 9, 7] },
-      { words: 'Soft little stars are in the skies', n: [9, 7, 4, 7, 4, 2, 0] },
-      { words: 'Breathe in slow, and out again', n: [4, 7, 9, 12, 9, 7, 4] },
-      { words: 'Sweet dreams, my friend, sweet dreams', n: [7, 9, 12, 9, 7, 4, 0] }
+    { title: '🔔 Jingle Bells', keys: /jingle|bells|christmas/i, lines: [
+      { words: 'Jingle bells, jingle bells, jingle all the way', n: [4, 4, [4, 2], 4, 4, [4, 2], 4, 7, [0, 1.5], [2, .5], [4, 4]] },
+      { words: 'Oh what fun it is to ride in a one horse open sleigh', n: [5, 5, [5, 1.5], [5, .5], 5, 4, 4, [4, .5], [4, .5], 2, 2, 4, 2, [7, 2]] },
+      { words: 'Jingle bells, jingle bells, jingle all the way', n: [4, 4, [4, 2], 4, 4, [4, 2], 4, 7, [0, 1.5], [2, .5], [4, 4]] }
     ] },
-    { title: 'Beep Boop Happy Song', keys: /happy|beep|boop|dance|fun/i, lines: [
-      { words: 'Beep boop beep, I am a little bot', n: [0, 2, 4, 0, 4, 7, 4] },
-      { words: 'Hop hop hop, we dance a lot', n: [7, 9, 12, 9, 7, 4, 0] },
-      { words: 'Smile smile smile, you are my star', n: [4, 4, 7, 12, 9, 7, 4] },
-      { words: 'Beep beep hooray, you are the best by far', n: [12, 9, 7, 4, 7, 4, 0] }
+    { title: '🐮 Old MacDonald', keys: /macdonald|farm|cow|e-?i-?e/i, lines: [
+      { words: 'Old MacDonald had a farm', n: [7, 7, 7, 2, 4, 4, [2, 2]] },
+      { words: 'E I E I O', n: [-1, -1, -3, -3, [-5, 2]] },
+      { words: 'And on his farm he had a cow', n: [7, 7, 7, 2, 4, 4, [2, 2]] },
+      { words: 'E I E I O', n: [-1, -1, -3, -3, [-5, 2]] },
+      { words: 'With a moo moo here and a moo moo there', n: [7, 7, 7, 2, 4, 4, [2, 2]] },
+      { words: 'Old MacDonald had a farm, E I E I O', n: [7, 7, 7, 2, 4, 4, [2, 2], -1, -1, -3, -3, [-5, 2]] }
     ] },
-    { title: 'Kinesin Cheer-Up Song', keys: /cheer|kinesin|sad|better/i, lines: [
-      { words: 'La la la, you are doing fine', n: [0, 4, 7, 9, 7, 4, 7] },
-      { words: 'Little clouds will pass in time', n: [9, 7, 4, 2, 4, 0, 2] },
-      { words: 'Breathe in slow, and out again', n: [4, 7, 9, 12, 9, 7, 4] },
-      { words: 'Sunshine comes after the rain', n: [7, 9, 12, 9, 7, 4, 0] },
-      { words: 'La la la, you are not alone', n: [0, 4, 7, 9, 12, 9, 7] },
-      { words: 'Kinesin is right here with you', n: [9, 7, 4, 7, 4, 2, 0] }
+    { title: '🌉 London Bridge', keys: /london|bridge/i, lines: [
+      { words: 'London Bridge is falling down', n: [[7, 1.5], [9, .5], 7, 5, 4, 5, [7, 2]] },
+      { words: 'Falling down, falling down', n: [2, 4, [5, 2], 4, 5, [7, 2]] },
+      { words: 'London Bridge is falling down', n: [[7, 1.5], [9, .5], 7, 5, 4, 5, [7, 2]] },
+      { words: 'My fair lady', n: [2, [7, 2], 4, [0, 3]] }
+    ] },
+    { title: '😴 Are You Sleeping (Brother John)', keys: /sleeping|jacques|brother|john/i, lines: [
+      { words: 'Are you sleeping, are you sleeping', n: [0, 2, 4, 0, 0, 2, 4, 0] },
+      { words: 'Brother John, brother John', n: [4, 5, [7, 2], 4, 5, [7, 2]] },
+      { words: 'Morning bells are ringing, morning bells are ringing', n: [[7, .5], [9, .5], [7, .5], [5, .5], 4, 0, [7, .5], [9, .5], [7, .5], [5, .5], 4, 0] },
+      { words: 'Ding dang dong, ding dang dong', n: [0, -5, [0, 2], 0, -5, [0, 2]] }
+    ] },
+    { title: '🍞 Hot Cross Buns', keys: /hot cross|buns/i, lines: [
+      { words: 'Hot cross buns, hot cross buns', n: [4, 2, [0, 2], 4, 2, [0, 2]] },
+      { words: 'One a penny, two a penny', n: [[0, .5], [0, .5], [0, .5], [0, .5], [2, .5], [2, .5], [2, .5], [2, .5]] },
+      { words: 'Hot cross buns', n: [4, 2, [0, 2]] }
+    ] },
+    { title: '🎻 Ode to Joy (la la la)', keys: /\bode\b|joy|beethoven/i, lines: [
+      { words: 'La la la la, la la la la', n: [4, 4, 5, 7, 7, 5, 4, 2] },
+      { words: 'La la la la, la la laa', n: [0, 0, 2, 4, [4, 1.5], [2, .5], [2, 2]] },
+      { words: 'La la la la, la la la la', n: [4, 4, 5, 7, 7, 5, 4, 2] },
+      { words: 'La la la la, la la laa', n: [0, 0, 2, 4, [2, 1.5], [0, .5], [0, 2]] }
+    ] },
+    { title: '🌙 Silent Night (short)', keys: /silent/i, lines: [
+      { words: 'Silent night, holy night', n: [[7, 1.5], [9, .5], 7, [4, 3], [7, 1.5], [9, .5], 7, [4, 3]] },
+      { words: 'All is calm, all is bright', n: [[14, 2], 14, [11, 3], [12, 2], 12, [7, 3]] }
+    ] },
+    { title: '🐑 Mary Had a Little Lamb', keys: /mary|lamb/i, lines: [
+      { words: 'Mary had a little lamb', n: [4, 2, 0, 2, 4, 4, [4, 2]] },
+      { words: 'Little lamb, little lamb', n: [2, 2, [2, 2], 4, 7, [7, 2]] },
+      { words: 'Mary had a little lamb', n: [4, 2, 0, 2, 4, 4, [4, 2]] },
+      { words: 'Its fleece was white as snow', n: [4, 2, 0, 2, 4, 4, 4, 4, 2, 2, 4, 2, [0, 2]] }
+    ] },
+    { title: '🚣 Row Row Row Your Boat', keys: /\brow\b|boat/i, lines: [
+      { words: 'Row row row your boat', n: [[0, 1.5], [0, 1.5], [0, 1], [2, .5], [4, 1.5]] },
+      { words: 'Gently down the stream', n: [[4, 1], [2, .5], [4, 1], [5, .5], [7, 2]] },
+      { words: 'Merrily merrily merrily merrily', n: [[12, .5], [12, .5], [12, .5], [7, .5], [7, .5], [7, .5], [4, .5], [4, .5], [4, .5], [0, .5], [0, .5], [0, .5]] },
+      { words: 'Life is but a dream', n: [[7, 1], [5, .5], [4, 1], [2, .5], [0, 2]] }
+    ] },
+    { title: '💤 Sleepy Robot Lullaby', keys: /lullaby|sleepy/i, lines: [
+      { words: 'Sleepy robot, close your eyes', n: [4, 4, 7, 7, 9, 9, [7, 2]] },
+      { words: 'Soft little stars are in the skies', n: [9, 7, 4, 7, 4, 2, [0, 2]] },
+      { words: 'Breathe in slow, and out again', n: [4, 7, 9, 12, 9, 7, [4, 2]] },
+      { words: 'Sweet dreams, my friend, sweet dreams', n: [7, 9, 12, 9, 7, 4, [0, 2]] }
+    ] },
+    { title: '🤖 Beep Boop Happy Song', keys: /beep|boop|\bfun\b|happy song/i, lines: [
+      { words: 'Beep boop beep, I am a little bot', n: [0, 2, 4, 0, 4, 7, [4, 2]] },
+      { words: 'Hop hop hop, we dance a lot', n: [7, 9, 12, 9, 7, 4, [0, 2]] },
+      { words: 'Smile smile smile, you are my star', n: [4, 4, 7, 12, 9, 7, [4, 2]] },
+      { words: 'Beep beep hooray, you are the best by far', n: [12, 9, 7, 4, 7, 4, [0, 2]] }
+    ] },
+    { title: '💜 Kinesin Cheer-Up Song', keys: /cheer|kinesin|\bsad\b|better/i, lines: [
+      { words: 'La la la, you are doing fine', n: [0, 4, 7, 9, 7, 4, [7, 2]] },
+      { words: 'Little clouds will pass in time', n: [9, 7, 4, 2, 4, 0, [2, 2]] },
+      { words: 'Breathe in slow, and out again', n: [4, 7, 9, 12, 9, 7, [4, 2]] },
+      { words: 'Sunshine comes after the rain', n: [7, 9, 12, 9, 7, 4, [0, 2]] },
+      { words: 'La la la, you are not alone', n: [0, 4, 7, 9, 12, 9, [7, 2]] },
+      { words: 'Kinesin is right here with you', n: [9, 7, 4, 7, 4, 2, [0, 2]] }
     ] }
   ];
   let lastSong = -1;
-  // sing()            -> a random song (never the same one twice in a row)
-  // sing('twinkle')   -> the song whose keys match the text
+  const songList = () => SONGS.map((x) => x.title).join('\n');
+  // sing()           -> a random song (never the same twice in a row)
+  // sing('jingle')   -> the song whose keys match the text
   async function sing(pref) {
     stopAll(); const t = token; busy = true;
     const btn = document.querySelector('[data-a="sing"]'); btn && btn.classList.add('on');
@@ -394,17 +476,19 @@
     lastSong = idx;
     const song = SONGS[idx];
     mode('sing');
-    addMsg('k', '🎵 ' + song.title + ' 🎵');
+    addMsg('k', song.title);
     for (const line of song.lines) {
       if (!alive(t)) return;
       caption('♪ ' + line.words + ' ♪', 4000);
       addMsg('k', '♪ ' + line.words);
-      line.n.forEach((s, i) => { tone(note(s), i * 0.42, 0.5, 'triangle', 0.12); tone(note(s - 12), i * 0.42, 0.55, 'sine', 0.07); });
+      // play the melody (loud music-box notes), one note per beat length
+      let at = 0;
+      line.n.forEach((x) => { const [semi, beats] = Array.isArray(x) ? x : [x, 1]; bell(semi, at, beats); at += beats * BEAT; });
+      const dur = at;
       for (let i = 0; i < 4; i++) setTimeout(() => alive(t) && floatNote(), i * 600);
-      const t0 = Date.now();
-      await say(line.words, { pitch: 1.9, rate: 0.85 }, t);
-      const left = line.n.length * 420 + 300 - (Date.now() - t0);
-      if (left > 0) await sleep(left);
+      // squeeze the words into the melody's length (about 13 characters per second at normal speed)
+      const rate = Math.max(0.55, Math.min(1.35, (line.words.length / 13) / dur));
+      await Promise.all([say(line.words, { sing: true, soft: true, rate }, t), sleep(dur * 1000 + 250)]);
     }
     if (!alive(t)) return;
     mode('laugh'); caption('Tank yoo for listening! 💜', 3000);
@@ -567,7 +651,7 @@
       cap.classList.remove('on');
       if (!greeted) {
         greeted = true;
-        addMsg('k', "Hewwo! Beep boop! I'm Kinesin, your tiny baby robot friend. 🤖 I can chat, sing lots of songs, dance, tell jokes, or breathe with you. Try typing \"sing twinkle\"! How are you feeling?");
+        addMsg('k', "Hewwo! Beep boop! I'm Kinesin, your tiny baby robot friend. 🤖 I can chat, sing lots of songs, dance, tell jokes, or breathe with you. Type \"songs\" to see all my songs! How are you feeling?");
         try { audio(); } catch (_) {}
         mode('laugh'); setTimeout(() => { if (!busy) mode(); }, 1500);
         say("Hi! I'm Kinesin. How are you feeling today?", {}, token);
@@ -586,6 +670,15 @@
     if (prefs.muted) { try { synth && synth.cancel(); } catch (_) {} }
   });
   $('kin-mute').textContent = prefs.muted ? '🔇' : '🔊';
+  $('kin-voice').addEventListener('click', () => {
+    const l = voiceList(); if (!l.length) { caption('No voices found on this device 😢', 3000); return; }
+    const i = Math.max(0, l.findIndex((v) => voice && v.name === voice.name));
+    voice = l[(i + 1) % l.length]; prefs.voiceName = voice.name; savePrefs();
+    audio(); stopAll();
+    caption('🎙️ ' + voice.name + (voice.localService ? '' : ' (online voice: pitch may not work)'), 4500);
+    addMsg('k', '🎙️ Voice: ' + voice.name);
+    say('Hewwo! Is dis cute? Hehe!', {}, token);
+  });
   $('kin-moods').addEventListener('click', (e) => { const c = e.target.closest('.kin-chip'); if (c) { audio(); moodTap(c.dataset.m); } });
   panel.querySelector('.kin-acts').addEventListener('click', (e) => {
     const b = e.target.closest('.kin-act'); if (!b) return;
@@ -598,6 +691,7 @@
     e.preventDefault();
     const v = input.value.trim(); if (!v) return;
     input.value = ''; audio();
+    if (/\b(songs|song list|song menu|what can you sing)\b/i.test(v)) { addMsg('u', v); addMsg('k', 'I know these songs. Type "sing" and a word, like "sing jingle" or "sing birthday":\n' + songList()); return; }
     if (/\b(sing|song)\b/i.test(v)) { addMsg('u', v); sing(v); return; }
     if (/\bdance\b/i.test(v)) { addMsg('u', v); dance(); return; }
     if (/\bjoke\b/i.test(v)) { addMsg('u', v); joke(); return; }
