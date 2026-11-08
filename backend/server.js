@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const analysisRoutes = require('./routes/analysis');
 const adminRoutes = require('./routes/admin');
 const kitRoutes = require('./routes/kit');
+const chatRoutes = require('./routes/chat');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -33,6 +34,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/scans', analysisRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/kit', kitRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Serve the frontend as static files
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');

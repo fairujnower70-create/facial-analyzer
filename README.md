@@ -172,3 +172,21 @@ problem.
 - For production use you'd want: email verification, rate limiting on auth
   routes, HTTPS, a stronger session strategy, and hosting the face-api.js
   model weights yourself instead of a public CDN.
+
+## Mood Buddy (AI companion chat)
+
+A floating chat button appears on every signed-in page. Backend: `backend/routes/chat.js`
+and `backend/lib/chat-core.js`. Frontend: `frontend/js/mood-agent.js`.
+
+Set these in `backend/.env` (or Render → Environment):
+
+| Variable | Meaning |
+| --- | --- |
+| `LLM_API_KEY` | Key from any OpenAI-compatible provider (Groq, OpenRouter, Mistral, ...). **Leave empty for scripted "simple mode".** |
+| `LLM_BASE_URL` | Provider endpoint, default `https://api.groq.com/openai/v1` |
+| `LLM_MODEL` | Model id (check the provider's current free model list) |
+| `CHAT_DAILY_LIMIT` | Messages per person per day (UTC), default 20 |
+| `CHAT_GLOBAL_DAILY_LIMIT` | Messages across everyone per day, default 800; above it, simple mode takes over |
+
+Messages are never stored (only a per-day counter). Self-harm phrases skip the model and get a
+fixed safe reply. The keyword list is a safety net, not a complete detector.

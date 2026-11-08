@@ -435,6 +435,7 @@ function renderResults(r) {
   els.resultsContent.style.display = 'block';
   renderAnalysisCard(els.resultsGrid, els.expressionsList, r);
   resetFeelPicker();
+  if (window.MoodAgent) MoodAgent.setLive({ face: r.dominantExpression, feeling: null });
 }
 
 // ---------- Face vs Feeling picker ----------
@@ -449,10 +450,11 @@ if (feelPicker && typeof FEELINGS !== 'undefined') {
     if (!btn || !lastResult) return;
     const already = btn.classList.contains('on');
     feelPicker.querySelectorAll('.feel-opt').forEach((b) => { b.classList.remove('on'); b.setAttribute('aria-checked', 'false'); });
-    if (already) { lastResult.selfFeeling = null; return; }
+    if (already) { lastResult.selfFeeling = null; if (window.MoodAgent) MoodAgent.setLive({ face: lastResult.dominantExpression, feeling: null }); return; }
     btn.classList.add('on');
     btn.setAttribute('aria-checked', 'true');
     lastResult.selfFeeling = btn.getAttribute('data-feel');
+    if (window.MoodAgent) MoodAgent.setLive({ face: lastResult.dominantExpression, feeling: lastResult.selfFeeling });
   });
 }
 function resetFeelPicker() {

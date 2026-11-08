@@ -72,6 +72,15 @@ async function init() {
   await pool.query('ALTER TABLE scans ADD COLUMN IF NOT EXISTS self_feeling TEXT');
   await pool.query('ALTER TABLE scans ADD COLUMN IF NOT EXISTS note TEXT');
   await pool.query('ALTER TABLE scans ADD COLUMN IF NOT EXISTS eye_open DOUBLE PRECISION');
+  // Mood Buddy: only a daily message counter is stored (never the messages).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chat_usage (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day DATE NOT NULL DEFAULT current_date,
+      count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (user_id, day)
+    )
+  `);
   // Bad Day Kit: the note you wrote to yourself.
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS kit_note TEXT');
   // client_id makes retries from the offline queue idempotent (no duplicates).
