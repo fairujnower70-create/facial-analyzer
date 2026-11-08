@@ -6,7 +6,7 @@
 // Nothing is stored on the server. He is a friendly companion, not a therapist.
 (function () {
   if (window.Kinesin) return;
-  console.log('Kinesin v4 loaded');
+  console.log('Kinesin v5 loaded');
 
   const LS = 'mien-kinesin';
   let prefs = { muted: false, hidden: false, voiceName: null };
@@ -31,7 +31,8 @@
   .kin-head .kin-ic{display:flex;gap:6px}
   .kin-ib{border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:var(--text-muted,#94a3b8);width:30px;height:30px;border-radius:10px;cursor:pointer;font-size:14px;line-height:1}
   .kin-ib:hover{color:var(--text-primary,#f8fafc);border-color:#8b5cf6}
-  .kin-log{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;min-height:150px}
+  .kin-log{scrollbar-width:none;-ms-overflow-style:none;flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;min-height:150px}
+  .kin-log::-webkit-scrollbar,.kin-panel::-webkit-scrollbar,.kin-moods::-webkit-scrollbar{display:none;width:0;height:0}
   .kin-row{display:flex;align-items:flex-end;gap:7px;max-width:100%}
   .kin-row.u{justify-content:flex-end}
   .kin-av{flex:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;background:linear-gradient(135deg,#818cf8,#22d3ee);box-shadow:0 2px 8px rgba(99,102,241,.4)}
@@ -139,7 +140,7 @@
     <div class="kin-cap" id="kin-cap" role="status" aria-live="polite"></div>
     <section class="kin-panel" id="kin-panel" role="dialog" aria-label="Kinesin the robot" hidden>
       <header class="kin-head">
-        <div><b>Kinesin 🤖</b><small>Tiny baby robot v4 · not a therapist</small></div>
+        <div><b>Kinesin 🤖</b><small>Tiny baby robot v5 · not a therapist</small></div>
         <div class="kin-ic">
           <button type="button" class="kin-ib" id="kin-voice" title="Change voice" aria-label="Change Kinesin voice">🎙️</button>
           <button type="button" class="kin-ib" id="kin-mute" title="Voice on/off" aria-label="Voice on or off">🔊</button>
