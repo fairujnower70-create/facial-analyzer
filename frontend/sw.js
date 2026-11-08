@@ -7,15 +7,15 @@
 //  * POST /api/scans while offline ... stored in IndexedDB, synced later
 try { importScripts('/js/offline-queue.js'); } catch (_) {}
 
-const V = 'v15';
+const V = 'v16';
 const STATIC = 'mien-static-' + V;
 const MODELS = 'mien-models-v1';
 const API = 'mien-api-' + V;
 const API_TIMEOUT_MS = 2000;
 const SHELL = [
-  '/', '/index.html', '/scan.html', '/history.html', '/dashboard.html', '/journal.html', '/wrapped.html', '/kit.html', '/login.html', '/signup.html',
+  '/', '/index.html', '/scan.html', '/history.html', '/dashboard.html', '/journal.html', '/story.html', '/kit.html', '/login.html', '/signup.html',
   '/css/style.css', '/js/api.js', '/js/nav.js', '/js/theme.js', '/js/reference-data.js', '/js/results-render.js',
-  '/js/vision-core.js', '/js/analyze.js', '/js/live-overlay.js', '/js/multi-face.js', '/js/share-card.js', '/js/feelings.js', '/js/wrapped.js', '/js/kit.js',
+  '/js/vision-core.js', '/js/analyze.js', '/js/live-overlay.js', '/js/multi-face.js', '/js/share-card.js', '/js/feelings.js', '/js/story.js', '/js/kit.js',
   '/js/charts.js', '/js/home.js', '/css/home.css', '/about.html', '/js/telemetry.js', '/js/offline-queue.js', '/manifest.webmanifest', '/icons/icon-192.png'
 ];
 const CACHEABLE_API = ['/api/scans', '/api/auth/me'];

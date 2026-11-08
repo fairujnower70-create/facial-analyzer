@@ -26,57 +26,65 @@
       <a href="/scan.html">Scan</a>
       <a href="/history.html">History</a>
       <a href="/journal.html">Journal</a>
-      <a href="/wrapped.html">Wrapped</a>
+      <a href="/story.html">Story</a>
       <a href="/kit.html">Bad day?</a>
     </div>
     <div class="nav-actions" id="nav-actions"></div>
   </div>
 </nav>
 
-<main class="wrap" style="padding:44px 24px 96px;">
-  <div style="max-width:620px; margin:0 auto;">
-    <div class="center" style="margin-bottom:26px;">
-      <h1 style="font-size:28px;">Bad Day Kit</h1>
-      <p>Rough day? You don't have to fix anything. Just go through these three things.</p>
-    </div>
+<main class="wrap kt-wrap">
+  <header class="kt-hero">
+    <p class="ms-eyebrow">Bad Day Kit</p>
+    <h1 class="ms-title">It's okay to have a rough day.</h1>
+    <p class="muted" style="max-width:520px; margin:8px auto 0;">Three small things, made from your own data. Nothing to fix, nothing to prove.</p>
+  </header>
 
-    <div id="loading" class="skeleton-stack"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+  <div id="loading" class="skeleton-stack"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
 
-    <div id="kit-body" style="display:none;">
+  <div id="kit-body" class="kt-grid" style="display:none;">
+    <div class="kt-col">
 
-      <section class="panel kit-section">
-        <h2 class="kit-h">1. Your own words</h2>
-        <blockquote id="kit-quote" class="kit-quote"></blockquote>
-        <div id="kit-edit-wrap" style="display:none; margin-top:12px;">
-          <textarea id="kit-input" class="feel-note" maxlength="280" rows="2" placeholder="Write something kind to your future self…" style="width:100%; resize:vertical;"></textarea>
-          <div class="row gap-12" style="margin-top:8px; align-items:center;">
-            <button class="btn btn-primary" id="kit-save">Save note</button>
-            <button class="btn btn-ghost" id="kit-cancel">Cancel</button>
+      <section class="kt-card kt-note">
+        <div class="kt-top"><span class="kt-step">1</span><span class="bt-label" style="margin:0;">Your own words</span>
+          <button class="kt-link" id="kit-edit" type="button">Edit</button></div>
+        <blockquote id="kit-quote" class="kt-quote"></blockquote>
+        <div id="kit-edit-wrap" style="display:none;">
+          <textarea id="kit-input" class="feel-note" maxlength="280" rows="3" placeholder="Write something kind to your future self…" style="width:100%; resize:vertical; margin-top:0;"></textarea>
+          <div class="kt-chips" id="kit-chips"></div>
+          <div class="row gap-12" style="margin-top:12px; align-items:center;">
+            <button class="btn btn-primary" id="kit-save" type="button">Save note</button>
+            <button class="btn btn-ghost" id="kit-cancel" type="button">Cancel</button>
             <span id="kit-msg" class="muted" style="font-size:12.5px;"></span>
           </div>
         </div>
-        <button class="btn btn-ghost" id="kit-edit" style="margin-top:12px;">Edit my note</button>
       </section>
 
-      <section class="panel kit-section">
-        <h2 class="kit-h">2. Your happiest moments</h2>
-        <p class="muted" style="font-size:13px; margin:0 0 14px;">From your own scans. These really happened.</p>
-        <div id="kit-happy"></div>
+      <section class="kt-card">
+        <div class="kt-top"><span class="kt-step">2</span><span class="bt-label" style="margin:0;">Your happiest moments</span></div>
+        <p class="muted" style="font-size:13px; margin:10px 0 14px;">Pulled from your own scans. These really happened.</p>
+        <div id="kit-happy" class="kt-rail"></div>
       </section>
+    </div>
 
-      <section class="panel kit-section center">
-        <h2 class="kit-h">3. One minute of breathing</h2>
+    <aside class="kt-col kt-sticky">
+      <section class="kt-card kt-breath center">
+        <div class="kt-top" style="justify-content:center;"><span class="kt-step">3</span><span class="bt-label" style="margin:0;">One minute of calm</span></div>
         <div class="breath-stage" id="breath-stage">
+          <div class="breath-ring r3"></div><div class="breath-ring r2"></div><div class="breath-ring r1"></div>
           <div class="breath-orb" id="breath-orb"></div>
           <div class="breath-text" id="breath-text">Ready?</div>
         </div>
-        <div id="breath-timer" class="muted" style="font-size:13px; min-height:20px; margin-bottom:12px;"></div>
-        <button class="btn btn-primary" id="breath-btn">Start (1 minute)</button>
+        <div class="breath-prog"><i id="breath-prog"></i></div>
+        <div id="breath-timer" class="muted" style="font-size:13px; min-height:20px; margin:10px 0 14px;">5 seconds in, 5 seconds out</div>
+        <button class="btn btn-primary" id="breath-btn" type="button">Start</button>
       </section>
-
-      <p class="field-hint center" style="margin-top:18px;">If it feels like more than a bad day, please reach out to someone you trust or a local helpline. You deserve support.</p>
-    </div>
+    </aside>
   </div>
+
+  <p class="field-hint center" style="margin-top:24px;">If it feels like more than a bad day, please reach out to someone you trust or a local helpline. You deserve support.</p>
+
+  <div id="kt-lb" class="kt-lb" style="display:none;" role="dialog" aria-modal="true"></div>
 </main>
 
 <footer class="site-footer">

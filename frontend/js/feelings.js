@@ -1,4 +1,4 @@
-// Shared helpers for Face vs Feeling, Mien Wrapped and the Bad Day Kit.
+// Shared helpers for Face vs Feeling, Mood Story and the Bad Day Kit.
 // Pure display / maths on scans that were already saved — no model code here.
 
 const FEELINGS = [
@@ -31,7 +31,7 @@ function parseExpr(scan) {
 }
 
 // Group-photo scans contain other people's faces, so they never count towards
-// personal stats (journal insights, wrapped, bad day kit).
+// personal stats (journal insights, mood story, bad day kit).
 function ownScans(scans) {
   return (scans || []).filter((s) => !/^Group photo/i.test(s.label || ''));
 }
@@ -84,7 +84,7 @@ function faceVsFeelingInsights(scans) {
   return out;
 }
 
-// ---- date helpers used by wrapped + journal ----
+// ---- date helpers used by story + journal ----
 const _pad = (n) => String(n).padStart(2, '0');
 function dayKey(d) { return `${d.getFullYear()}-${_pad(d.getMonth() + 1)}-${_pad(d.getDate())}`; }
 function dayNumber(k) { const [y, m, d] = k.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / 86400000); }
