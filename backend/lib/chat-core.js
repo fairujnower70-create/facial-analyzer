@@ -5,7 +5,7 @@
 const FEELINGS = ['happy', 'okay', 'tired', 'sad', 'stressed', 'angry', 'anxious', 'excited'];
 const FACES = ['happy', 'sad', 'angry', 'surprised', 'neutral', 'fearful', 'disgusted', 'funny', 'excited', 'shy', 'contempt'];
 
-const USER_DAILY = Number(process.env.CHAT_DAILY_LIMIT) || 20;
+const USER_DAILY = Number(process.env.CHAT_DAILY_LIMIT) || 100;
 const GLOBAL_DAILY = Number(process.env.CHAT_GLOBAL_DAILY_LIMIT) || 800;
 
 // Keyword safety net. It is NOT complete (the model prompt also handles this),
@@ -19,9 +19,6 @@ const CRISIS_REPLY =
   "If you think you might act on these thoughts, please move to a safe place near other people. " +
   "I'm an AI, so I can't be the support you need in this moment.\n\n" +
   "Tumi eka na. Ekhon-i kono trusted manush-er shathe kotha bolo, ba tomar desher emergency number ba helpline-e jogajog koro.";
-
-const LIMITED_REPLY =
-  "We've talked a lot today, and I'd like to leave it there for now. Try the breathing exercise in the Bad Day Kit, or message someone you trust. I'll be here tomorrow.";
 
 const FALLBACKS = {
   sad: ["That sounds heavy. You don't have to fix it right now. Want to tell me a little about what made today feel this way?", "I'm sorry it's a hard day. Sometimes naming it helps a bit. What's weighing on you most?"],
@@ -118,7 +115,9 @@ function createChat(db) {
       const mine = await db.query(
         `INSERT INTO chat_usage (user_id, day, count) VALUES ($1, current_date, 1)
          ON CONFLICT (user_id, day) DO UPDATE SET count = chat_usage.count + 1 RETURNING count`, [userId]);
-      if (mine.rows[0].count > USER_DAILY) return { status: 200, reply: LIMITED_REPLY, limited: true };
+      // Over the daily AI limit: keep chatting with the built-in scripted replies
+      // (no API cost) instead of cutting the person off.
+      if (mine.rows[0].count > USER_DAILY) allowed = false;
       const all = await db.query('SELECT COALESCE(SUM(count), 0)::int AS n FROM chat_usage WHERE day = current_date');
       if (all.rows[0].n > GLOBAL_DAILY) allowed = false;
     } catch (_) {}

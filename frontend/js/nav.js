@@ -97,7 +97,7 @@
     // Kinesin, the tiny robot companion (signed-in pages only; self-contained).
     if (!window.Kinesin && !document.querySelector('script[data-kinesin]')) {
       const ks = document.createElement('script');
-      ks.src = '/js/kinesin.js'; ks.defer = true; ks.setAttribute('data-kinesin', '1');
+      ks.src = '/js/kinesin.js?v=2'; ks.defer = true; ks.setAttribute('data-kinesin', '1');
       document.body.appendChild(ks);
     }
 

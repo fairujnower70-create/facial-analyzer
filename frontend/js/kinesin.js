@@ -6,6 +6,7 @@
 // Nothing is stored on the server. He is a friendly companion, not a therapist.
 (function () {
   if (window.Kinesin) return;
+  console.log('Kinesin v2 loaded');
 
   const LS = 'mien-kinesin';
   let prefs = { muted: false, hidden: false };
@@ -22,7 +23,7 @@
   .kin.hidden .kin-bot{width:46px;height:54px;opacity:.85}
   .kin-cap{position:absolute;left:70px;bottom:78px;max-width:230px;padding:9px 12px;border-radius:16px 16px 16px 4px;background:var(--bg-card,#0f172a);color:var(--text-primary,#f8fafc);border:1px solid var(--border,rgba(148,163,184,.3));font-size:13.5px;line-height:1.4;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;transform:translateY(6px) scale(.96);transform-origin:left bottom;pointer-events:none;transition:opacity .25s,transform .25s}
   .kin-cap.on{opacity:1;transform:none}
-  .kin-panel{position:absolute;left:0;bottom:108px;width:332px;max-width:calc(100vw - 28px);max-height:min(520px,calc(100vh - 150px));display:flex;flex-direction:column;border-radius:22px;border:1px solid var(--border,rgba(148,163,184,.3));background:var(--bg-card,#0b1220);box-shadow:0 24px 70px rgba(0,0,0,.55);overflow:hidden}
+  .kin-panel{position:absolute;left:0;bottom:108px;width:340px;max-width:calc(100vw - 28px);max-height:min(540px,calc(100vh - 150px));display:flex;flex-direction:column;border-radius:26px;border:1px solid var(--border,rgba(148,163,184,.3));background:var(--bg-card,#0b1220);box-shadow:0 24px 70px rgba(0,0,0,.55);overflow:hidden}
   .kin-panel[hidden]{display:none}
   .kin-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border,rgba(148,163,184,.3));background:linear-gradient(135deg,rgba(99,102,241,.28),rgba(34,211,238,.12))}
   .kin-head b{display:block;font-size:15px;color:var(--text-primary,#f8fafc)}
@@ -30,21 +31,29 @@
   .kin-head .kin-ic{display:flex;gap:6px}
   .kin-ib{border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:var(--text-muted,#94a3b8);width:30px;height:30px;border-radius:10px;cursor:pointer;font-size:14px;line-height:1}
   .kin-ib:hover{color:var(--text-primary,#f8fafc);border-color:#8b5cf6}
-  .kin-log{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:90px}
-  .kin-m{max-width:88%;padding:9px 12px;border-radius:14px;font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
-  .kin-m.k{align-self:flex-start;background:var(--bg-input,#1e293b);color:var(--text-primary,#f8fafc);border-bottom-left-radius:4px}
-  .kin-m.u{align-self:flex-end;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-bottom-right-radius:4px}
+  .kin-log{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;min-height:150px}
+  .kin-row{display:flex;align-items:flex-end;gap:7px;max-width:100%}
+  .kin-row.u{justify-content:flex-end}
+  .kin-av{flex:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;background:linear-gradient(135deg,#818cf8,#22d3ee);box-shadow:0 2px 8px rgba(99,102,241,.4)}
+  .kin-m{max-width:80%;padding:9px 13px;border-radius:18px;font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+  .kin-m.typing{display:flex;gap:4px;align-items:center;padding:12px 14px}
+  .kin-m.typing i{width:7px;height:7px;border-radius:50%;background:#a5b4fc;animation:kDot 1s infinite ease-in-out}
+  .kin-m.typing i:nth-child(2){animation-delay:.15s}.kin-m.typing i:nth-child(3){animation-delay:.3s}
+  @keyframes kDot{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+  .kin-m.k{background:linear-gradient(135deg,rgba(129,140,248,.22),rgba(34,211,238,.12));color:var(--text-primary,#f8fafc);border:1px solid rgba(129,140,248,.25);border-bottom-left-radius:5px}
+  .kin-m.u{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-bottom-right-radius:5px}
   .kin-m.crisis{border:1px solid #f59e0b}
   .kin-acts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 12px 8px}
   .kin-act{border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:var(--text-primary,#f8fafc);border-radius:12px;padding:7px 2px;font:inherit;font-size:11.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
   .kin-act span{font-size:18px;line-height:1.1}
   .kin-act:hover,.kin-act.on{border-color:#8b5cf6;background:rgba(139,92,246,.16)}
-  .kin-moods{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 8px}
-  .kin-chip{border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:var(--text-muted,#94a3b8);border-radius:999px;padding:5px 11px;font:inherit;font-size:12px;cursor:pointer}
+  .kin-moods{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;padding:2px 12px 8px;scrollbar-width:none}
+  .kin-moods::-webkit-scrollbar{display:none}
+  .kin-chip{flex:none;white-space:nowrap;border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:var(--text-muted,#94a3b8);border-radius:999px;padding:5px 11px;font:inherit;font-size:12px;cursor:pointer}
   .kin-chip:hover{color:var(--text-primary,#f8fafc);border-color:#8b5cf6}
   .kin-form{display:flex;gap:6px;padding:8px 12px 10px;border-top:1px solid var(--border,rgba(148,163,184,.3))}
-  .kin-form input{flex:1;min-width:0;padding:9px 11px;border-radius:12px;border:1px solid var(--border,rgba(148,163,184,.3));background:var(--bg-input,#1e293b);color:var(--text-primary,#f8fafc);font:inherit;font-size:13.5px}
-  .kin-form button{border:0;border-radius:12px;padding:0 13px;font:inherit;font-weight:600;color:#fff;cursor:pointer;background:linear-gradient(135deg,#6366f1,#8b5cf6)}
+  .kin-form input{flex:1;min-width:0;padding:9px 14px;border-radius:999px;border:1px solid var(--border,rgba(148,163,184,.3));background:var(--bg-input,#1e293b);color:var(--text-primary,#f8fafc);font:inherit;font-size:13.5px}
+  .kin-form button{border:0;border-radius:999px;padding:0 15px;font:inherit;font-weight:600;color:#fff;cursor:pointer;background:linear-gradient(135deg,#6366f1,#8b5cf6)}
   .kin-form .kin-mic{background:var(--bg-input,#1e293b);color:var(--text-primary,#f8fafc);border:1px solid var(--border,rgba(148,163,184,.3))}
   .kin-form .kin-mic.rec{background:#ef4444;border-color:#ef4444;color:#fff}
   .kin-foot{margin:0;padding:0 14px 10px;font-size:10.5px;line-height:1.4;color:var(--text-muted,#94a3b8)}
@@ -130,7 +139,7 @@
     <div class="kin-cap" id="kin-cap" role="status" aria-live="polite"></div>
     <section class="kin-panel" id="kin-panel" role="dialog" aria-label="Kinesin the robot" hidden>
       <header class="kin-head">
-        <div><b>Kinesin 🤖</b><small>Tiny robot friend · not a therapist</small></div>
+        <div><b>Kinesin 🤖</b><small>Tiny baby robot v2 · not a therapist</small></div>
         <div class="kin-ic">
           <button type="button" class="kin-ib" id="kin-mute" title="Voice on/off" aria-label="Voice on or off">🔊</button>
           <button type="button" class="kin-ib" id="kin-min" title="Tuck away" aria-label="Tuck Kinesin away">–</button>
@@ -151,11 +160,11 @@
         <button type="button" class="kin-act" data-a="breathe"><span>🌬️</span>Breathe</button>
       </div>
       <form class="kin-form" id="kin-form">
-        <input id="kin-in" maxlength="500" autocomplete="off" placeholder="Talk to Kinesin…" />
+        <input id="kin-in" maxlength="500" autocomplete="off" placeholder="Say hi to Kinesin…" />
         <button type="button" class="kin-mic" id="kin-mic" title="Speak" aria-label="Speak" hidden>🎤</button>
         <button type="submit">Send</button>
       </form>
-      <p class="kin-foot">Kinesin's voice is your device's text-to-speech. Chat messages go to an AI service to write replies and are not saved on Mien. Please don't share passwords or ID numbers.</p>
+      <p class="kin-foot">Voice = your device's text-to-speech. Messages go to an AI service and are not saved. Don't share passwords or ID numbers.</p>
     </section>
     <button type="button" class="kin-bot" id="kin-bot" aria-label="Open Kinesin the robot">${robotSvg}<div class="kin-notes" id="kin-notes"></div></button>`;
   document.body.appendChild(root);
@@ -182,13 +191,22 @@
     capTimer = setTimeout(() => cap.classList.remove('on'), ms || Math.max(3200, text.length * 55));
   }
   function addMsg(who, text, crisis) {
+    const row = document.createElement('div');
+    row.className = 'kin-row ' + (who === 'u' ? 'u' : 'k');
+    if (who !== 'u') {
+      const av = document.createElement('span');
+      av.className = 'kin-av'; av.textContent = '🤖'; av.setAttribute('aria-hidden', 'true');
+      row.appendChild(av);
+    }
     const d = document.createElement('div');
     d.className = 'kin-m ' + (who === 'u' ? 'u' : 'k') + (crisis ? ' crisis' : '');
-    d.textContent = text;
-    log.appendChild(d);
+    if (text === null) { d.classList.add('typing'); d.innerHTML = '<i></i><i></i><i></i>'; }
+    else d.textContent = text;
+    row.appendChild(d);
+    log.appendChild(row);
     while (log.children.length > 40) log.removeChild(log.firstChild);
     log.scrollTop = log.scrollHeight;
-    return d;
+    return row;
   }
   function floatNote(sym) {
     if (reduce) return;
@@ -205,32 +223,61 @@
   // ---------------------------------------------------------------- voice
   const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
   let voice = null;
+  // Prefer light, high voices; avoid deep male ones (the "adult" sound).
+  const LIGHT = /samantha|google us english|aria|jenny|zira|karen|tessa|moira|allison|ava|susan|female/i;
+  const HEAVY = /\bmale\b|david|mark|daniel|alex|fred|ralph|bruce|george|james|guy|ryan|eric|aaron|arthur|rishi/i;
   function chooseVoice() {
     if (!synth) return;
     const vs = synth.getVoices();
     if (!vs.length) return;
     const en = vs.filter((v) => /^en/i.test(v.lang));
-    voice = en.find((v) => /female|samantha|zira|google uk english female|aria|jenny|natural/i.test(v.name)) || en[0] || vs[0];
+    const pool = en.length ? en : vs;
+    voice = pool.find((v) => LIGHT.test(v.name) && !HEAVY.test(v.name)) || pool.find((v) => !HEAVY.test(v.name)) || pool[0];
   }
   if (synth) { chooseVoice(); synth.addEventListener && synth.addEventListener('voiceschanged', chooseVoice); }
 
-  // Speaks a line in Kinesin's little robot voice (high pitch). Resolves when
-  // finished; if voice is muted/unsupported it just waits a reading-time.
+  // Funny baby-robot accent: only changes what is SPOKEN, never what is shown.
+  const EMOJI = /[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u266A-\u266F\uFE0F]/gu;
+  const CUTE = [
+    [/\blove\b/gi, 'wuv'], [/\bplease\b/gi, 'pwease'], [/\blittle\b/gi, 'widdle'], [/\bwith\b/gi, 'wiv'],
+    [/\bthank you\b/gi, 'tank yoo'], [/\bsorry\b/gi, 'sowwy'], [/\bwhat\b/gi, 'wat'], [/\bthe\b/gi, 'da'],
+    [/\bthis\b/gi, 'dis'], [/\bthat\b/gi, 'dat'], [/\bthere\b/gi, 'dere'], [/\bfriend\b/gi, 'fwend'],
+    [/\bhello\b/gi, 'hewwo'], [/\byou\b/gi, 'yoo'], [/\bsing\b/gi, 'sing-sing'], [/\bgood\b/gi, 'goodie']
+  ];
+  function cutify(text, soft) {
+    let s = text.replace(EMOJI, ' ').replace(/\s+/g, ' ').trim();
+    CUTE.forEach(([re, to]) => { s = s.replace(re, to); });
+    s = s.replace(/\br(?=[aeiou])/gi, (m) => (m === 'R' ? 'W' : 'w'));
+    if (!soft) s = s.replace(/([.!?])\s+/g, (m, p) => p + ' ' + (Math.random() < 0.3 ? pick(['Hehe!', 'Beep boop!', 'Eep!', 'Yay!']) + ' ' : ''));
+    return s;
+  }
+
+  // Speaks a line in Kinesin's baby-robot voice. Each short chunk gets a slightly
+  // different pitch/rate so it wobbles and sounds playful. Resolves when finished.
+  // opts.plain = no baby talk (used for serious/crisis replies); opts.soft = no jokes.
   function say(text, opts, t) {
     opts = opts || {};
     const wait = Math.max(900, text.length * 62);
     if (!synth || prefs.muted) return sleep(wait).then(() => {});
+    const spoken = opts.plain ? text.replace(EMOJI, ' ').replace(/\s+/g, ' ').trim() : cutify(text, opts.soft);
+    const parts = (spoken.match(/[^.!?,;]+[.!?,;]*/g) || [spoken]).map((p) => p.trim()).filter(Boolean);
+    if (!parts.length) return Promise.resolve();
     return new Promise((resolve) => {
-      let done = false;
+      let done = false, left = parts.length;
       const fin = () => { if (!done) { done = true; resolve(); } };
       try {
-        const u = new SpeechSynthesisUtterance(text);
-        if (voice) { u.voice = voice; u.lang = voice.lang; }
-        u.pitch = opts.pitch || 1.75;
-        u.rate = opts.rate || 1.02;
-        u.volume = 1;
-        u.onend = fin; u.onerror = fin;
-        synth.speak(u);
+        parts.forEach((p) => {
+          const u = new SpeechSynthesisUtterance(p);
+          if (voice) { u.voice = voice; u.lang = voice.lang; }
+          if (opts.plain) { u.pitch = opts.pitch || 1.1; u.rate = opts.rate || 0.9; }
+          else {
+            u.pitch = Math.min(2, (opts.pitch || 1.9) + 0.2 - Math.random() * 0.15);
+            u.rate = Math.max(0.5, (opts.rate || 1.05) * (0.95 + Math.random() * 0.14));
+          }
+          u.volume = 1;
+          u.onend = u.onerror = () => { if (--left <= 0) fin(); };
+          synth.speak(u);
+        });
         setTimeout(fin, wait * 2.5 + 3000);
       } catch (_) { fin(); }
     });
@@ -292,30 +339,75 @@
   }
 
   // ---------------------------------------------------------------- behaviours
-  const SONG = [
-    { words: 'La la la, you are doing fine', n: [0, 4, 7, 9, 7, 4, 7] },
-    { words: 'Little clouds will pass in time', n: [9, 7, 4, 2, 4, 0, 2] },
-    { words: 'Breathe in slow, and out again', n: [4, 7, 9, 12, 9, 7, 4] },
-    { words: 'Sunshine comes after the rain', n: [7, 9, 12, 9, 7, 4, 0] },
-    { words: 'La la la, you are not alone', n: [0, 4, 7, 9, 12, 9, 7] },
-    { words: 'Kinesin is right here with you', n: [9, 7, 4, 7, 4, 2, 0] }
+  // Notes are semitones above middle C. To add YOUR song: copy one entry, change
+  // title / keys (words that trigger it when typed, e.g. "sing twinkle") / lines.
+  const SONGS = [
+    { title: 'Twinkle Twinkle', keys: /twinkle|star/i, lines: [
+      { words: 'Twinkle twinkle little star', n: [0, 0, 7, 7, 9, 9, 7] },
+      { words: 'How I wonder what you are', n: [5, 5, 4, 4, 2, 2, 0] },
+      { words: 'Up above the world so high', n: [7, 7, 5, 5, 4, 4, 2] },
+      { words: 'Like a diamond in the sky', n: [7, 7, 5, 5, 4, 4, 2] },
+      { words: 'Twinkle twinkle little star', n: [0, 0, 7, 7, 9, 9, 7] },
+      { words: 'How I wonder what you are', n: [5, 5, 4, 4, 2, 2, 0] }
+    ] },
+    { title: 'Row Row Row Your Boat', keys: /row|boat/i, lines: [
+      { words: 'Row row row your boat', n: [0, 0, 0, 2, 4] },
+      { words: 'Gently down the stream', n: [4, 2, 4, 5, 7] },
+      { words: 'Merrily merrily merrily merrily', n: [12, 12, 12, 7, 7, 7, 4, 4, 4, 0, 0, 0] },
+      { words: 'Life is but a dream', n: [7, 5, 4, 2, 0] }
+    ] },
+    { title: 'Mary Had a Little Lamb', keys: /mary|lamb/i, lines: [
+      { words: 'Mary had a little lamb', n: [4, 2, 0, 2, 4, 4, 4] },
+      { words: 'Little lamb, little lamb', n: [2, 2, 2, 4, 7, 7] },
+      { words: 'Mary had a little lamb', n: [4, 2, 0, 2, 4, 4, 4] },
+      { words: 'Its fleece was white as snow', n: [4, 2, 0, 2, 4, 4, 4, 4, 2, 2, 4, 2, 0] }
+    ] },
+    { title: 'Sleepy Robot Lullaby', keys: /lullaby|sleep|sleepy|night/i, lines: [
+      { words: 'Sleepy robot, close your eyes', n: [4, 4, 7, 7, 9, 9, 7] },
+      { words: 'Soft little stars are in the skies', n: [9, 7, 4, 7, 4, 2, 0] },
+      { words: 'Breathe in slow, and out again', n: [4, 7, 9, 12, 9, 7, 4] },
+      { words: 'Sweet dreams, my friend, sweet dreams', n: [7, 9, 12, 9, 7, 4, 0] }
+    ] },
+    { title: 'Beep Boop Happy Song', keys: /happy|beep|boop|dance|fun/i, lines: [
+      { words: 'Beep boop beep, I am a little bot', n: [0, 2, 4, 0, 4, 7, 4] },
+      { words: 'Hop hop hop, we dance a lot', n: [7, 9, 12, 9, 7, 4, 0] },
+      { words: 'Smile smile smile, you are my star', n: [4, 4, 7, 12, 9, 7, 4] },
+      { words: 'Beep beep hooray, you are the best by far', n: [12, 9, 7, 4, 7, 4, 0] }
+    ] },
+    { title: 'Kinesin Cheer-Up Song', keys: /cheer|kinesin|sad|better/i, lines: [
+      { words: 'La la la, you are doing fine', n: [0, 4, 7, 9, 7, 4, 7] },
+      { words: 'Little clouds will pass in time', n: [9, 7, 4, 2, 4, 0, 2] },
+      { words: 'Breathe in slow, and out again', n: [4, 7, 9, 12, 9, 7, 4] },
+      { words: 'Sunshine comes after the rain', n: [7, 9, 12, 9, 7, 4, 0] },
+      { words: 'La la la, you are not alone', n: [0, 4, 7, 9, 12, 9, 7] },
+      { words: 'Kinesin is right here with you', n: [9, 7, 4, 7, 4, 2, 0] }
+    ] }
   ];
-  async function sing() {
+  let lastSong = -1;
+  // sing()            -> a random song (never the same one twice in a row)
+  // sing('twinkle')   -> the song whose keys match the text
+  async function sing(pref) {
     stopAll(); const t = token; busy = true;
-    $('kin-panel') && document.querySelector('[data-a="sing"]').classList.add('on');
+    const btn = document.querySelector('[data-a="sing"]'); btn && btn.classList.add('on');
+    let idx = typeof pref === 'string' ? SONGS.findIndex((x) => x.keys.test(pref)) : -1;
+    if (idx < 0) { do { idx = Math.floor(Math.random() * SONGS.length); } while (idx === lastSong && SONGS.length > 1); }
+    lastSong = idx;
+    const song = SONGS[idx];
     mode('sing');
-    addMsg('k', '🎵 A little song for you:');
-    for (const line of SONG) {
+    addMsg('k', '🎵 ' + song.title + ' 🎵');
+    for (const line of song.lines) {
       if (!alive(t)) return;
       caption('♪ ' + line.words + ' ♪', 4000);
       addMsg('k', '♪ ' + line.words);
       line.n.forEach((s, i) => { tone(note(s), i * 0.42, 0.5, 'triangle', 0.12); tone(note(s - 12), i * 0.42, 0.55, 'sine', 0.07); });
       for (let i = 0; i < 4; i++) setTimeout(() => alive(t) && floatNote(), i * 600);
-      await say(line.words, { pitch: 1.9, rate: 0.82 }, t);
-      await sleep(1900 - Math.min(1500, line.words.length * 40));
+      const t0 = Date.now();
+      await say(line.words, { pitch: 1.9, rate: 0.85 }, t);
+      const left = line.n.length * 420 + 300 - (Date.now() - t0);
+      if (left > 0) await sleep(left);
     }
     if (!alive(t)) return;
-    mode('laugh'); caption('Thank you for listening! 💜', 3000);
+    mode('laugh'); caption('Tank yoo for listening! 💜', 3000);
     addMsg('k', 'Thank you for listening! 💜');
     await sleep(1200); if (!alive(t)) return;
     stopAll();
@@ -410,7 +502,7 @@
     if (!text) return;
     stopAll(); const t = token;
     addMsg('u', text);
-    const typing = addMsg('k', '…');
+    const typing = addMsg('k', null);
     mode('talk');
     let reply = '', crisis = false;
     try {
@@ -428,11 +520,14 @@
     if (!alive(t)) return;
     history.push({ role: 'user', content: text }, { role: 'assistant', content: reply });
     addMsg('k', reply, crisis);
-    caption(reply.split('\n')[0].slice(0, 160), 6000);
+    const sents = reply.replace(/\s+/g, ' ').match(/[^.!?]+[.!?]*/g) || [reply];
+    let spoken = '';
+    for (const sn of sents) { if (spoken && (spoken + sn).length > 240) break; spoken += sn; }
+    caption(spoken.slice(0, 200), 6000);
     mode(crisis || kind === 'sad' ? 'sad' : 'talk');
     if (crisis) root.classList.add('sad');
     root.classList.add('talk');
-    await say(reply.split('\n')[0], { pitch: crisis ? 1.3 : 1.55, rate: crisis ? 0.85 : 0.98 }, t);
+    await say(spoken, crisis ? { plain: true, pitch: 1.1, rate: 0.85 } : { soft: kind === 'sad' || kind === 'stressed', pitch: 1.8, rate: 1.05 }, t);
     if (!alive(t)) return;
     if (kind === 'sad' || kind === 'stressed') root.classList.remove('talk'); else mode();
     // a gentle offer after comforting, never forced, never after a crisis message
@@ -448,12 +543,12 @@
       stopAll(); const t = token; mode('sad');
       const l = "I'm really sorry you feel sad. I'm right here. I'll sing you a little song.";
       addMsg('u', 'I feel sad'); addMsg('k', l); caption(l, 5000);
-      say(l, { pitch: 1.5, rate: 0.9 }, t).then(() => alive(t) && sing());
+      say(l, { pitch: 1.6, rate: 0.9, soft: true }, t).then(() => alive(t) && sing('lullaby'));
     } else if (m === 'stressed') {
       stopAll(); const t = token; mode('sad');
       const l = "Stress is heavy. Let's slow everything down together.";
       addMsg('u', "I'm stressed"); addMsg('k', l); caption(l, 4000);
-      say(l, { pitch: 1.5, rate: 0.9 }, t).then(() => alive(t) && breathe());
+      say(l, { pitch: 1.6, rate: 0.9, soft: true }, t).then(() => alive(t) && breathe());
     } else if (m === 'bored') {
       addMsg('u', 'Cheer me up'); (Math.random() < 0.5 ? joke : dance)();
     } else if (m === 'happy') {
@@ -472,7 +567,7 @@
       cap.classList.remove('on');
       if (!greeted) {
         greeted = true;
-        addMsg('k', "Beep boop! I'm Kinesin, your tiny robot friend. 🤖 I can chat, sing, dance, tell jokes, or breathe with you. How are you feeling?");
+        addMsg('k', "Hewwo! Beep boop! I'm Kinesin, your tiny baby robot friend. 🤖 I can chat, sing lots of songs, dance, tell jokes, or breathe with you. Try typing \"sing twinkle\"! How are you feeling?");
         try { audio(); } catch (_) {}
         mode('laugh'); setTimeout(() => { if (!busy) mode(); }, 1500);
         say("Hi! I'm Kinesin. How are you feeling today?", {}, token);
@@ -503,6 +598,9 @@
     e.preventDefault();
     const v = input.value.trim(); if (!v) return;
     input.value = ''; audio();
+    if (/\b(sing|song)\b/i.test(v)) { addMsg('u', v); sing(v); return; }
+    if (/\bdance\b/i.test(v)) { addMsg('u', v); dance(); return; }
+    if (/\bjoke\b/i.test(v)) { addMsg('u', v); joke(); return; }
     const kind = /\b(sad|cry|crying|lonely|down|hopeless|depress)/i.test(v) ? 'sad' : /\b(stress|anxious|anxiety|worried|panic|overwhelm|pressure)/i.test(v) ? 'stressed' : '';
     talkTo(v, kind);
   });
