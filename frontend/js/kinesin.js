@@ -6,10 +6,10 @@
 // Nothing is stored on the server. He is a friendly companion, not a therapist.
 (function () {
   if (window.Kinesin) return;
-  console.log('Kinesin v5 loaded');
+  console.log('Kinesin v6 loaded');
 
   const LS = 'mien-kinesin';
-  let prefs = { muted: false, hidden: false, voiceName: null };
+  let prefs = { muted: false, hidden: false, voiceName: null, style: 'human' };
   try { Object.assign(prefs, JSON.parse(localStorage.getItem(LS) || '{}')); } catch (_) {}
   const savePrefs = () => { try { localStorage.setItem(LS, JSON.stringify(prefs)); } catch (_) {} };
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -140,7 +140,7 @@
     <div class="kin-cap" id="kin-cap" role="status" aria-live="polite"></div>
     <section class="kin-panel" id="kin-panel" role="dialog" aria-label="Kinesin the robot" hidden>
       <header class="kin-head">
-        <div><b>Kinesin 🤖</b><small>Tiny baby robot v5 · not a therapist</small></div>
+        <div><b>Kinesin 🤖</b><small>Your little friend · v6 · not a therapist</small></div>
         <div class="kin-ic">
           <button type="button" class="kin-ib" id="kin-voice" title="Change voice" aria-label="Change Kinesin voice">🎙️</button>
           <button type="button" class="kin-ib" id="kin-mute" title="Voice on/off" aria-label="Voice on or off">🔊</button>
@@ -150,6 +150,7 @@
       </header>
       <div class="kin-log" id="kin-log" aria-live="polite"></div>
       <div class="kin-moods" id="kin-moods">
+        <button type="button" class="kin-chip" id="kin-style">Voice</button>
         <button type="button" class="kin-chip" data-m="sad">😔 I feel sad</button>
         <button type="button" class="kin-chip" data-m="stressed">😣 I'm stressed</button>
         <button type="button" class="kin-chip" data-m="bored">🥱 Cheer me up</button>
@@ -225,15 +226,26 @@
   // ---------------------------------------------------------------- voice
   const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
   let voice = null;
-  // Local (on-device) voices obey pitch; "Google" / "Natural" / online voices IGNORE
-  // pitch, so they can never sound like a baby. Rank local + light voices first.
+  // Voice styles. "human" = natural voice, normal pitch, normal words (default).
+  const STYLES = {
+    human: { label: '🧑 Human', pitch: 1.12, rate: 1.0, cute: 0, giggle: 0, sing: 1.3 },
+    cute:  { label: '🧸 Cute',  pitch: 1.5,  rate: 1.05, cute: 1, giggle: 0.12, sing: 1.65 },
+    baby:  { label: '🍼 Baby',  pitch: 2,    rate: 1.17, cute: 2, giggle: 0.3, sing: 2 }
+  };
+  const curStyle = () => STYLES[prefs.style] || STYLES.human;
+
   const LIGHT = /samantha|aria|jenny|zira|karen|tessa|moira|allison|ava|susan|victoria|female/i;
   const HEAVY = /\bmale\b|david|mark|daniel|alex|fred|ralph|bruce|george|james|guy|ryan|eric|aaron|arthur|rishi/i;
+  const NATURAL = /natural|neural|premium|enhanced|online|google/i;
+  // Human style: natural / neural voices sound most like a person.
+  // Cute + Baby: on-device voices (they obey the pitch setting; online ones ignore it).
   function voiceList() {
     const vs = synth ? synth.getVoices() : [];
     const en = vs.filter((v) => /^en/i.test(v.lang));
     const pool = en.length ? en : vs;
-    const score = (v) => (v.localService ? 0 : 10) + (HEAVY.test(v.name) ? 20 : 0) + (LIGHT.test(v.name) ? 0 : 3) + (/google|natural|online/i.test(v.name) ? 5 : 0);
+    const human = (prefs.style || 'human') === 'human';
+    const score = (v) => (HEAVY.test(v.name) ? 20 : 0) + (LIGHT.test(v.name) ? 0 : 3) +
+      (human ? (NATURAL.test(v.name) ? -6 : 0) : (v.localService ? 0 : 10) + (/google|natural|online/i.test(v.name) ? 5 : 0));
     return pool.slice().sort((a, b) => score(a) - score(b));
   }
   function chooseVoice() {
@@ -242,55 +254,64 @@
     if (!l.length) return;
     voice = (prefs.voiceName && l.find((v) => v.name === prefs.voiceName)) || l[0];
   }
+  function bnVoice() { const vs = synth ? synth.getVoices() : []; return vs.find((v) => /^bn/i.test(v.lang)) || null; }
   if (synth) { chooseVoice(); synth.addEventListener && synth.addEventListener('voiceschanged', chooseVoice); }
 
-  // Funny baby-robot accent: only changes what is SPOKEN, never what is shown.
+  // Baby talk only changes what is SPOKEN (never what is shown), and only in Cute/Baby.
   const EMOJI = /[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u266A-\u266F\uFE0F]/gu;
-  const CUTE = [
-    [/\blove\b/gi, 'wuv'], [/\bplease\b/gi, 'pwease'], [/\blittle\b/gi, 'widdle'], [/\bwith\b/gi, 'wiv'],
-    [/\bthank you\b/gi, 'tank yoo'], [/\bsorry\b/gi, 'sowwy'], [/\bwhat\b/gi, 'wat'], [/\bthe\b/gi, 'da'],
+  const CUTE_LIGHT = [[/\bhello\b/gi, 'hewwo'], [/\bsorry\b/gi, 'sowwy'], [/\bplease\b/gi, 'pwease']];
+  const CUTE = CUTE_LIGHT.concat([
+    [/\blove\b/gi, 'wuv'], [/\blittle\b/gi, 'widdle'], [/\bwith\b/gi, 'wiv'],
+    [/\bthank you\b/gi, 'tank yoo'], [/\bwhat\b/gi, 'wat'], [/\bthe\b/gi, 'da'],
     [/\bthis\b/gi, 'dis'], [/\bthat\b/gi, 'dat'], [/\bthere\b/gi, 'dere'], [/\bfriend\b/gi, 'fwend'],
-    [/\bhello\b/gi, 'hewwo'], [/\byou\b/gi, 'yoo'], [/\byour\b/gi, 'yoor'], [/\bgood\b/gi, 'goodie'],
+    [/\byou\b/gi, 'yoo'], [/\byour\b/gi, 'yoor'], [/\bgood\b/gi, 'goodie'],
     [/\bhelp\b/gi, 'hewp'], [/\blook\b/gi, 'wook'], [/\blike\b/gi, 'wike'], [/\blet's\b/gi, 'wets'],
     [/\bsmile\b/gi, 'smiwe'], [/\bsleep\b/gi, 'sweep'], [/\bsleepy\b/gi, 'sweepy'], [/\bwant\b/gi, 'wanna'],
-    [/\bmy\b/gi, 'mai'], [/\bI'm\b/g, 'Ai am'], [/\bhappy\b/gi, 'happeee'], [/\bsong\b/gi, 'songie']
-  ];
-  function cutify(text, soft) {
+    [/\bmy\b/gi, 'mai'], [/\bhappy\b/gi, 'happeee'], [/\bsong\b/gi, 'songie']
+  ]);
+  function cutify(text, soft, level) {
     let s = text.replace(EMOJI, ' ').replace(/\s+/g, ' ').trim();
-    CUTE.forEach(([re, to]) => { s = s.replace(re, to); });
-    s = s.replace(/r(?=[aeiou])/gi, (m) => (m === 'R' ? 'W' : 'w'));          // r -> w anywhere
-    s = s.replace(/\bl(?=[aeiou])/gi, (m) => (m === 'L' ? 'W' : 'w'));         // word-start l -> w
-    if (!soft) s = s.replace(/([.!?])\s+/g, (m, p) => p + ' ' + (Math.random() < 0.35 ? pick(['Hehe!', 'Beep boop!', 'Eeee!', 'Yay yay!', 'Giggle!']) + ' ' : ''));
+    if (!level) return s;
+    (level > 1 ? CUTE : CUTE_LIGHT).forEach(([re, to]) => { s = s.replace(re, to); });
+    if (level > 1) {
+      s = s.replace(/r(?=[aeiou])/gi, (m) => (m === 'R' ? 'W' : 'w'));
+      s = s.replace(/\bl(?=[aeiou])/gi, (m) => (m === 'L' ? 'W' : 'w'));
+      if (!soft) s = s.replace(/([.!?])\s+/g, (m, p) => p + ' ' + (Math.random() < 0.35 ? pick(['Hehe!', 'Eeee!', 'Yay yay!']) + ' ' : ''));
+    }
     return s;
   }
   function giggle() {
     for (let i = 0; i < 4; i++) tone(900 + Math.random() * 500 + i * 120, i * 0.075, 0.07, 'sine', 0.05);
   }
 
-  // Speaks a line in Kinesin's baby-robot voice. Each short chunk gets a slightly
-  // different pitch/rate so it wobbles and sounds playful. Resolves when finished.
-  // opts.plain = no baby talk (used for serious/crisis replies); opts.soft = no jokes.
+  // Speaks a line. Short phrases, slight natural variation in pitch/speed.
+  // opts.plain = no styling (serious/crisis); opts.soft = gentle; opts.sing = singing mode.
+  // Bangla script is read with a Bangla voice when the device has one.
   function say(text, opts, t) {
     opts = opts || {};
     const wait = Math.max(900, text.length * 62);
     if (!synth || prefs.muted) return sleep(wait).then(() => {});
-    const spoken = opts.plain ? text.replace(EMOJI, ' ').replace(/\s+/g, ' ').trim() : cutify(text, opts.soft);
+    const st = curStyle();
+    const clean = text.replace(EMOJI, ' ').replace(/\s+/g, ' ').trim();
+    const isBn = /[\u0980-\u09FF]/.test(clean);
+    const spoken = (opts.plain || isBn) ? clean : cutify(clean, opts.soft, st.cute);
     const parts = opts.sing
       ? [spoken.replace(/[.!?,;]/g, ' ').replace(/\s+/g, ' ').trim()].filter(Boolean)
-      : (spoken.match(/[^.!?,;]+[.!?,;]*/g) || [spoken]).map((p) => p.trim()).filter(Boolean);
+      : (spoken.match(/[^.!?,;।]+[.!?,;।]*/g) || [spoken]).map((p) => p.trim()).filter(Boolean);
     if (!parts.length) return Promise.resolve();
+    const v = (isBn && bnVoice()) || voice;
     return new Promise((resolve) => {
       let done = false, left = parts.length;
-      const fin = () => { if (!done) { done = true; if (!opts.plain && !opts.soft && Math.random() < 0.3) giggle(); resolve(); } };
+      const fin = () => { if (!done) { done = true; if (!opts.plain && !opts.soft && !opts.sing && Math.random() < st.giggle) giggle(); resolve(); } };
       try {
         parts.forEach((p) => {
           const u = new SpeechSynthesisUtterance(p);
-          if (voice) { u.voice = voice; u.lang = voice.lang; }
-          if (opts.plain) { u.pitch = opts.pitch || 1.1; u.rate = opts.rate || 0.9; }
-          else if (opts.sing) { u.pitch = 2; u.rate = opts.rate || 0.9; }
+          if (v) { u.voice = v; u.lang = v.lang; }
+          if (opts.plain) { u.pitch = opts.pitch || 1.0; u.rate = opts.rate || 0.9; }
+          else if (opts.sing) { u.pitch = st.sing; u.rate = opts.rate || 0.9; }
           else {
-            u.pitch = 2 - Math.random() * 0.08;                                    // browser max = 2
-            u.rate = Math.max(0.6, (opts.rate || 1.05) * 1.12 * (0.95 + Math.random() * 0.14)); // quick + squeaky
+            u.pitch = Math.max(0.8, Math.min(2, st.pitch - (opts.soft ? 0.1 : 0) - Math.random() * 0.06));
+            u.rate = Math.max(0.6, Math.min(1.6, st.rate * ((opts.rate || 1.05) / 1.05) * (0.97 + Math.random() * 0.06)));
           }
           u.volume = 1;
           u.onend = u.onerror = () => { if (--left <= 0) fin(); };
@@ -492,7 +513,7 @@
       await Promise.all([say(line.words, { sing: true, soft: true, rate }, t), sleep(dur * 1000 + 250)]);
     }
     if (!alive(t)) return;
-    mode('laugh'); caption('Tank yoo for listening! 💜', 3000);
+    mode('laugh'); caption('Thank you for listening! 💜', 3000);
     addMsg('k', 'Thank you for listening! 💜');
     await sleep(1200); if (!alive(t)) return;
     stopAll();
@@ -502,8 +523,8 @@
     stopAll(); const t = token; busy = true;
     document.querySelector('[data-a="dance"]').classList.add('on');
     mode('dance');
-    caption('Beep boop, dance time! 💃', 3000);
-    addMsg('k', "Beep boop, dance time! Let's wiggle those worries away 💃");
+    caption('Dance time! 💃', 3000);
+    addMsg('k', "Dance time! Let's wiggle those worries away 💃");
     const melody = [0, 4, 7, 4, 9, 7, 4, 2];
     let step = 0;
     beatTimer = setInterval(() => {
@@ -652,7 +673,7 @@
       cap.classList.remove('on');
       if (!greeted) {
         greeted = true;
-        addMsg('k', "Hewwo! Beep boop! I'm Kinesin, your tiny baby robot friend. 🤖 I can chat, sing lots of songs, dance, tell jokes, or breathe with you. Type \"songs\" to see all my songs! How are you feeling?");
+        addMsg('k', "Hi! I'm Kinesin, your little friend. 🤖 I can chat, sing songs, dance, tell jokes, or breathe with you. Type \"songs\" to see my songs. How are you feeling today?");
         try { audio(); } catch (_) {}
         mode('laugh'); setTimeout(() => { if (!busy) mode(); }, 1500);
         say("Hi! I'm Kinesin. How are you feeling today?", {}, token);
@@ -678,9 +699,22 @@
     audio(); stopAll();
     caption('🎙️ ' + voice.name + (voice.localService ? '' : ' (online voice: pitch may not work)'), 4500);
     addMsg('k', '🎙️ Voice: ' + voice.name);
-    say('Hewwo! Is dis cute? Hehe!', {}, token);
+    say("Hi, I'm Kinesin. How does this voice sound?", {}, token);
   });
-  $('kin-moods').addEventListener('click', (e) => { const c = e.target.closest('.kin-chip'); if (c) { audio(); moodTap(c.dataset.m); } });
+  const showStyle = () => { $('kin-style').textContent = 'Voice: ' + curStyle().label; };
+  showStyle();
+  $('kin-moods').addEventListener('click', (e) => {
+    const c = e.target.closest('.kin-chip'); if (!c) return;
+    audio();
+    if (c.id === 'kin-style') {
+      const order = ['human', 'cute', 'baby'];
+      prefs.style = order[(order.indexOf(prefs.style) + 1) % order.length];
+      prefs.voiceName = null; savePrefs(); chooseVoice(); showStyle(); stopAll();
+      say("Hi, I'm Kinesin. Nice to meet you!", {}, token);
+      return;
+    }
+    moodTap(c.dataset.m);
+  });
   panel.querySelector('.kin-acts').addEventListener('click', (e) => {
     const b = e.target.closest('.kin-act'); if (!b) return;
     audio();
