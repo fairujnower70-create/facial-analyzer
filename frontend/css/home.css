@@ -170,13 +170,15 @@
 .hm-built span:hover { transform: translateY(-2px); border-color: var(--neon); color: var(--text-primary); }
 
 /* ---------- final CTA ---------- */
-.hm-cta-box { position: relative; text-align: center; padding: 56px 24px; border-radius: 22px; overflow: hidden; background: var(--bg-panel); isolation: isolate; }
-.hm-cta-box::before { content: ''; position: absolute; inset: -2px; z-index: -2; background: conic-gradient(from var(--ang, 0deg), #22d3ee, #8b5cf6, #ec4899, #22d3ee); animation: hm-spin-ang 7s linear infinite; }
-.hm-cta-box::after { content: ''; position: absolute; inset: 2px; z-index: -1; border-radius: 20px; background: var(--bg-panel); }
+.hm-cta-box { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; max-width: 860px; margin: 0 auto; padding: 26px 32px; border-radius: 18px; overflow: hidden; background: var(--bg-panel); isolation: isolate; text-align: left; }
+.hm-cta-box::before { content: ''; position: absolute; inset: -1px; z-index: -2; background: conic-gradient(from var(--ang, 0deg), #22d3ee, #8b5cf6, #ec4899, #22d3ee); animation: hm-spin-ang 7s linear infinite; }
+.hm-cta-box::after { content: ''; position: absolute; inset: 1px; z-index: -1; border-radius: 17px; background: var(--bg-panel); }
 @property --ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 @keyframes hm-spin-ang { to { --ang: 360deg; } }
-.hm-cta-box h2 { font-size: clamp(26px, 3.6vw, 38px); }
-.hm-cta-box p { max-width: 460px; margin: 0 auto 24px; }
+.hm-cta-copy { flex: 1 1 320px; min-width: 0; }
+.hm-cta-box h2 { font-size: clamp(20px, 2.6vw, 25px); margin: 0 0 4px; }
+.hm-cta-box p { font-size: 14.5px; margin: 0; max-width: 460px; }
+@media (max-width: 640px) { .hm-cta-copy { flex: none; } .hm-cta-box { flex-direction: column; text-align: center; padding: 24px 20px; } .hm-cta-box p { margin: 0 auto; } }
 
 /* about page */
 .hm-about h2 { margin-top: 34px; }
